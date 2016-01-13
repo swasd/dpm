@@ -1,0 +1,4 @@
+machines:
+  kvstore:
+    driver: digitalocean
+    options: 

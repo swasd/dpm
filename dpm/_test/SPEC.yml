@@ -1,0 +1,8 @@
+---
+spec:
+  name: test
+  version: 0.0.1
+  provision: provision.yml
+  composition: composition.yml
+  description: >
+    This is the test package.

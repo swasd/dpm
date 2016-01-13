@@ -1,0 +1,11 @@
+---
+spec:
+  from: scratch
+  provision: provision.yml
+  composition: composition.yml
+  dirs:
+    - web
+    - test
+  description: >
+    This is a test package.
+
