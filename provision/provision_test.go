@@ -145,3 +145,66 @@ machines:
 	err = m.Delete()
 	assert.NoError(t, err)
 }
+
+func TestExpadingProvision(t *testing.T) {
+	yml := `---
+machines:
+  fake:
+    instances: 2
+    driver: none
+    options:
+      url: tcp://1.2.3.4:1234
+      engine-install-url: https://test.docker.com
+      engine-opt:
+        cluster-store: consul://192.168.1.81:8500
+        cluster-advertise: eth0:2376
+    post-provision:
+      - bash -c echo ${ip fake-1} ${fake-1}
+`
+	spec, err := Read([]byte(yml))
+	assert.NoError(t, err)
+	machines := spec.Machines()
+	assert.Equal(t, len(machines), 2)
+
+	m := spec.Machine("fake-1")
+	err = m.Create()
+	assert.NoError(t, err)
+	for _, p := range m.PostProvision() {
+		assert.Equal(t, p, "bash -c echo 1.2.3.4 1.2.3.4")
+	}
+	err = m.Delete()
+	assert.NoError(t, err)
+}
+
+func TestPostProvision(t *testing.T) {
+	yml := `---
+machines:
+  fake:
+    instances: 2
+    driver: none
+    options:
+      url: tcp://1.2.3.4:1234
+      engine-install-url: https://test.docker.com
+      engine-opt:
+        cluster-store: consul://192.168.1.81:8500
+        cluster-advertise: eth0:2376
+    post-provision:
+      - bash -c "echo ${ip fake-1} ${fake-1}"
+`
+	spec, err := Read([]byte(yml))
+	assert.NoError(t, err)
+	machines := spec.Machines()
+	assert.Equal(t, len(machines), 2)
+
+	m := spec.Machine("fake-1")
+	err = m.Create()
+	assert.NoError(t, err)
+	for _, p := range m.PostProvision() {
+		assert.Equal(t, p, "bash -c \"echo 1.2.3.4 1.2.3.4\"")
+	}
+	out, err := m.ExecutePostProvision()
+	assert.NoError(t, err)
+	assert.Equal(t, out[0], "1.2.3.4 1.2.3.4\n")
+	err = m.Delete()
+	assert.NoError(t, err)
+}
