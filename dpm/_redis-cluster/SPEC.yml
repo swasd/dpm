@@ -1,0 +1,13 @@
+---
+spec:
+  name: redis-cluster
+  version: 0.1.0.dev
+  provision: provision.yml
+  composition: composition.yml
+  description: >
+    This is an example of starting
+    a 3 nodes of Redis cluster using DPM,
+    a package manager for Docker.
+    Nodes will be provisioned on DigitalOcean,
+    so a DigitalOcean's Access Token is required.
+
