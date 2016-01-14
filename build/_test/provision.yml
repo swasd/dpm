@@ -1,5 +1,8 @@
 ---
 machines:
+  fake-master:
+    driver: digitalocean
+ 
   fake:
     instances: 2
     driver: none
