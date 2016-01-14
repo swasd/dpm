@@ -24,9 +24,9 @@ func TestSave(t *testing.T) {
 	assert.NoError(t, err)
 	err = p.SaveToDir("./_test")
 	assert.NoError(t, err)
-	_, err = os.Stat("./_test/test_0.1.0.dev-none.dpm")
+	_, err = os.Stat("./_test/test_0.1.0.dev-do+none.dpm")
 	assert.NoError(t, err)
-	err = os.Remove("./_test/test_0.1.0.dev-none.dpm")
+	err = os.Remove("./_test/test_0.1.0.dev-do+none.dpm")
 	assert.NoError(t, err)
 }
 
