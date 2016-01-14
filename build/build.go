@@ -23,10 +23,20 @@ func BuildPackage(dir string) (*Package, error) {
 	tarfile := new(archivex.TarFile)
 	tarfile.Writer = tar.NewWriter(buf)
 
-	tarfile.AddFileWithName(dir+"/SPEC.yml", "SPEC.yml")
-	tarfile.AddFileWithName(dir+"/provision.yml", "provision.yml")
-	tarfile.AddFileWithName(dir+"/composition.yml", "composition.yml")
-	tarfile.AddAll(dir+"/web", true)
+	specContent, err := ioutil.ReadFile(filepath.Join(dir, "SPEC.yml"))
+	root := make(map[string]*Spec)
+	err = yaml.Unmarshal(specContent, &root)
+	if err != nil {
+		return nil, err
+	}
+	spec := root["spec"]
+
+	tarfile.AddFileWithName(filepath.Join(dir, "SPEC.yml"), "SPEC.yml")
+	tarfile.AddFileWithName(filepath.Join(dir, spec.Provision), spec.Provision)
+	tarfile.AddFileWithName(filepath.Join(dir, spec.Composition), spec.Composition)
+	for _, d := range spec.Dirs {
+		tarfile.AddAll(filepath.Join(dir, d), true)
+	}
 	tarfile.Close()
 	return &Package{buf.Bytes()}, nil
 }
@@ -40,12 +50,16 @@ func LoadPackage(filename string) (*Package, error) {
 }
 
 func (p *Package) Save() error {
+	return p.SaveToDir(".")
+}
+
+func (p *Package) SaveToDir(dir string) error {
 	spec, err := p.Spec()
 	if err != nil {
 		return err
 	}
 	filename := spec.Name + "_" + spec.Version + "-" + spec.Type + ".dpm"
-	return p.SaveToFile(filename)
+	return p.SaveToFile(dir + "/" + filename)
 }
 
 func (p *Package) SaveToFile(filename string) error {
@@ -58,7 +72,9 @@ type Spec struct {
 	Type        string
 	Provision   string
 	Composition string
+	Title       string
 	Description string
+	Dirs        []string
 }
 
 func (p *Package) Spec() (*Spec, error) {

@@ -7,7 +7,8 @@ spec:
   composition: composition.yml
   dirs:
     - web
-    - test
+    - back
+  title: Test - dpm test package
   description: >
     This is a test package.
 
