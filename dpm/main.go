@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/codegangsta/cli"
 	"github.com/hashicorp/go-getter"
@@ -39,11 +41,13 @@ func cp(src, dst string) (err error) {
 	return
 }
 
+var repo = "https://raw.githubusercontent.com/swasd/dpm-repo/master/"
+
 func doInstall(c *cli.Context) {
+	home := os.Getenv("HOME")
 	packageName := c.Args().First()
 	if _, err := os.Stat(packageName); err == nil {
 		fmt.Println("Install from a local package")
-		home := os.Getenv("HOME")
 		pwd, err := os.Getwd()
 		if err != nil {
 			fmt.Println(err)
@@ -55,8 +59,23 @@ func doInstall(c *cli.Context) {
 			os.Exit(1)
 		}
 	} else {
-		err := getter.GetFile(packageName+".dpm",
-			"https://raw.githubusercontent.com/swasd/dpm-repo/master/"+packageName+".dpm")
+		fmt.Println("Install from a remote repository")
+		err := getter.GetFile(filepath.Join(home, "/.dpm/index/", "dpm.index"), repo+"dpm.index")
+		if err != nil {
+			fmt.Println(err)
+		}
+		index, err := ioutil.ReadFile(filepath.Join(home, "/.dpm/index/", "dpm.index"))
+		lines := strings.Split(string(index), "\n")
+		filename := ""
+		for _, line := range lines {
+			parts := strings.SplitN(line, "\t", 3)
+			if parts[0] == packageName {
+				filename = parts[1]
+				break
+			}
+		}
+
+		err = getter.GetFile(filepath.Join(home, "/.dpm/cache", filename), repo+filename)
 		if err != nil {
 			fmt.Println(err)
 		}
