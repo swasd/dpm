@@ -147,6 +147,11 @@ func (m *Machine) PostProvision() []string {
 	result := []string{}
 	for _, p := range m.post {
 		expanded := os.Expand(p, func(key string) string {
+
+			if key == "self" {
+				return m.name
+			}
+
 			val := os.Getenv(key)
 			if val == "" {
 				parts := strings.SplitN(key, " ", 2)
