@@ -24,9 +24,9 @@ func TestSave(t *testing.T) {
 	assert.NoError(t, err)
 	err = p.SaveToDir("./_test")
 	assert.NoError(t, err)
-	_, err = os.Stat("./_test/test_0.1.0.dev-docker.dpm")
+	_, err = os.Stat("./_test/test_0.1.0.dev-none.dpm")
 	assert.NoError(t, err)
-	err = os.Remove("./_test/test_0.1.0.dev-docker.dpm")
+	err = os.Remove("./_test/test_0.1.0.dev-none.dpm")
 	assert.NoError(t, err)
 }
 
@@ -76,7 +76,6 @@ func TestSpecInfo(t *testing.T) {
 	spec, err := p2.Spec()
 	assert.Equal(t, spec.Provision, "provision.yml")
 	assert.Equal(t, spec.Composition, "composition.yml")
-	assert.Equal(t, spec.Type, "docker")
 	assert.Equal(t, spec.Title, "Test - dpm test package")
 	assert.Equal(t, spec.Name, "test")
 	assert.Equal(t, spec.Version, "0.1.0.dev")

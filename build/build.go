@@ -3,15 +3,20 @@ package build
 import (
 	"archive/tar"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 
 	"github.com/jhoonb/archivex"
+	"github.com/swasd/dpm/provision"
 )
 
 type Package struct {
@@ -53,13 +58,22 @@ func (p *Package) Save() error {
 	return p.SaveToDir(".")
 }
 
+func (p *Package) Sha256() string {
+	s := sha256.Sum256(p.content)
+	return hex.EncodeToString(s[:])
+}
+
 func (p *Package) SaveToDir(dir string) error {
 	spec, err := p.Spec()
 	if err != nil {
 		return err
 	}
-	filename := spec.Name + "_" + spec.Version + "-" + spec.Type + ".dpm"
-	return p.SaveToFile(dir + "/" + filename)
+	platforms, err := p.platforms()
+	if err != nil {
+		return err
+	}
+	filename := spec.Name + "_" + spec.Version + "-" + platforms + ".dpm"
+	return p.SaveToFile(filepath.Join(dir, filename))
 }
 
 func (p *Package) SaveToFile(filename string) error {
@@ -69,7 +83,6 @@ func (p *Package) SaveToFile(filename string) error {
 type Spec struct {
 	Name        string
 	Version     string
-	Type        string
 	Provision   string
 	Composition string
 	Title       string
@@ -96,6 +109,82 @@ func (p *Package) Spec() (*Spec, error) {
 	}
 
 	return root["spec"], nil
+}
+
+func (p *Package) platforms() (string, error) {
+	result := make(map[string]bool)
+	pp, err := p.provision()
+	if err != nil {
+		return "", err
+	}
+	for _, m := range pp.Machines() {
+		switch m.Driver() {
+		case "amazonec2":
+			result["aws"] = true
+		case "azure":
+			result["az"] = true
+		case "exoscale":
+			result["ex"] = true
+		case "google":
+			result["gce"] = true
+		case "generic":
+			result["ge"] = true
+		case "hyperv":
+			result["hv"] = true
+		case "openstack":
+			result["os"] = true
+		case "rackspace":
+			result["rs"] = true
+		case "softlayer":
+			result["sl"] = true
+		case "virtualbox":
+			result["vbox"] = true
+		case "vmwarevcloudair":
+			result["vca"] = true
+		case "vmwarefusion":
+			result["vf"] = true
+		case "vmwarevsphere":
+			result["vs"] = true
+		case "digitalocean":
+			result["do"] = true
+		case "none":
+			result["none"] = true
+		}
+	}
+	keys := []string{}
+	for k, _ := range result {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return strings.Join(keys, "+"), nil
+}
+
+func (p *Package) provision() (*provision.Spec, error) {
+	spec, err := p.Spec()
+	if err != nil {
+		return nil, err
+	}
+	prov := spec.Provision
+
+	br := bytes.NewReader(p.content)
+	tr := tar.NewReader(br)
+	hdr, err := tr.Next()
+	for {
+		if err != nil {
+			return nil, err
+		}
+		if hdr.Name == prov {
+			break
+		}
+		hdr, err = tr.Next()
+	}
+
+	provisionContent := make([]byte, hdr.Size)
+	n, err := io.ReadFull(tr, provisionContent)
+	if int64(n) != hdr.Size {
+		return nil, fmt.Errorf("Size not match")
+	}
+	return provision.Read(provisionContent)
 }
 
 func (p *Package) Extract(dest string) error {
