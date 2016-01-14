@@ -119,6 +119,37 @@ machines:
 		"ocean-1"})
 }
 
+func TestGenCommandLineWithSwarm(t *testing.T) {
+	yml := `---
+machines:
+  ocean:
+    instances: 2
+    driver: digitalocean
+    options:
+      engine-install-url: https://test.docker.com
+      engine-opt:
+        cluster-store: consul://192.168.1.81:8500
+        cluster-advertise: eth0:2376
+      swarm: true
+      swarm-discovery: consul://1.2.3.4:8500/test
+`
+	spec, err := Read([]byte(yml))
+	assert.NoError(t, err)
+	machines := spec.Machines()
+	assert.Equal(t, len(machines), 2)
+
+	m := spec.Machine("ocean-1")
+	assert.NotNil(t, m)
+	assert.Equal(t, m.CmdLine(), []string{
+		"--driver", "digitalocean",
+		"--engine-install-url", "https://test.docker.com",
+		"--engine-opt", "cluster-advertise=eth0:2376",
+		"--engine-opt", "cluster-store=consul://192.168.1.81:8500",
+		"--swarm",
+		"--swarm-discovery", "consul://1.2.3.4:8500/test",
+		"ocean-1"})
+}
+
 func TestCreate(t *testing.T) {
 	yml := `---
 machines:
@@ -205,6 +236,7 @@ machines:
 	out, err := m.ExecutePostProvision()
 	assert.NoError(t, err)
 	assert.Equal(t, out[0], "1.2.3.4 1.2.3.4\n")
+
 	err = m.Delete()
 	assert.NoError(t, err)
 }
