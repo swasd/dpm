@@ -1,0 +1,35 @@
+---
+machines:
+  consul:
+    driver: digitalocean
+    options:
+      digitalocean-image: debian-8-x64
+    post-provision:
+      - docker run -p 8400:8400 -p 8500:8500
+        -p 8600:53/udp -h ${self}
+        progrium/consul -server -bootstrap
+
+  ocean-master:
+    driver: digitalocean
+    options:
+      digitalocean-image: debian-8-x64
+      engine-opt:
+        cluster-store: consul://${consul}:8500
+        cluster-advertise: eth0:2376
+      swarm: true
+      swarm-master: true
+      swarm-discovery: consul://${consul}:8500
+    post-provision:
+      - docker network create --driver overlay multihost
+
+  ocean:
+    driver: digitalocean
+    instances: 3
+    options:
+      digitalocean-image: debian-8-x64
+      engine-opt:
+        cluster-store: consul://${consul}:8500
+        cluster-advertise: eth0:2376
+      swarm: true
+      swarm-discovery: consul://${consul}:8500/discovery
+
