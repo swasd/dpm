@@ -65,7 +65,7 @@ machines:
 
 	m := spec.Machine("ocean-1")
 	assert.NotNil(t, m)
-	assert.Equal(t, m.CmdLine(), []string{
+	assert.Equal(t, m.cmdLine(), []string{
 		"--driver", "digitalocean",
 		"ocean-1"})
 }
@@ -86,7 +86,7 @@ machines:
 
 	m := spec.Machine("ocean-1")
 	assert.NotNil(t, m)
-	assert.Equal(t, m.CmdLine(), []string{
+	assert.Equal(t, m.cmdLine(), []string{
 		"--driver", "digitalocean",
 		"--engine-install-url", "https://test.docker.com",
 		"ocean-1"})
@@ -111,7 +111,7 @@ machines:
 
 	m := spec.Machine("ocean-1")
 	assert.NotNil(t, m)
-	assert.Equal(t, m.CmdLine(), []string{
+	assert.Equal(t, m.cmdLine(), []string{
 		"--driver", "digitalocean",
 		"--engine-install-url", "https://test.docker.com",
 		"--engine-opt", "cluster-advertise=eth0:2376",
@@ -140,7 +140,7 @@ machines:
 
 	m := spec.Machine("ocean-1")
 	assert.NotNil(t, m)
-	assert.Equal(t, m.CmdLine(), []string{
+	assert.Equal(t, m.cmdLine(), []string{
 		"--driver", "digitalocean",
 		"--engine-install-url", "https://test.docker.com",
 		"--engine-opt", "cluster-advertise=eth0:2376",
@@ -170,10 +170,10 @@ machines:
 
 	m := spec.Machine("fake-1")
 	assert.NotNil(t, m)
-	err = m.Create()
+	err = m.create()
 	assert.NoError(t, err)
 
-	err = m.Delete()
+	err = m.doDelete()
 	assert.NoError(t, err)
 }
 
@@ -198,12 +198,12 @@ machines:
 	assert.Equal(t, len(machines), 2)
 
 	m := spec.Machine("fake-1")
-	err = m.Create()
+	err = m.create()
 	assert.NoError(t, err)
-	for _, p := range m.PostProvision() {
+	for _, p := range m.postProvision() {
 		assert.Equal(t, p, "bash -c echo 1.2.3.4 1.2.3.4")
 	}
-	err = m.Delete()
+	err = m.doDelete()
 	assert.NoError(t, err)
 }
 
@@ -228,15 +228,15 @@ machines:
 	assert.Equal(t, len(machines), 2)
 
 	m := spec.Machine("fake-1")
-	err = m.Create()
+	err = m.create()
 	assert.NoError(t, err)
-	for _, p := range m.PostProvision() {
+	for _, p := range m.postProvision() {
 		assert.Equal(t, p, "bash -c \"echo 1.2.3.4 1.2.3.4 fake-1\"")
 	}
-	out, err := m.ExecutePostProvision()
+	out, err := m.executePostProvision()
 	assert.NoError(t, err)
 	assert.Equal(t, out[0], "1.2.3.4 1.2.3.4 fake-1\n")
 
-	err = m.Delete()
+	err = m.doDelete()
 	assert.NoError(t, err)
 }
