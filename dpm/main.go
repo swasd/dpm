@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -160,6 +162,37 @@ func doBuild(c *cli.Context) {
 	}
 }
 
+func doIndex(c *cli.Context) {
+	dir := "."
+	if len(c.Args()) >= 1 {
+		dir = c.Args().First()
+	}
+	infos, err := ioutil.ReadDir(dir)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	dpmIndex, err := os.Create(dir + "/dpm.index")
+	defer dpmIndex.Close()
+
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	for _, f := range infos {
+		if strings.HasSuffix(f.Name(), ".dpm") {
+			parts := strings.SplitN(f.Name(), "_", 2)
+			b, err := ioutil.ReadFile(dir + "/" + f.Name())
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			hash := sha256.Sum256(b)
+			fmt.Fprintf(dpmIndex, "%s\t%s\t%s\n", parts[0], f.Name(), hex.EncodeToString(hash[:]))
+		}
+	}
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "dpm"
@@ -190,6 +223,11 @@ func main() {
 				},
 			},
 			Action: doBuild,
+		},
+		{
+			Name:   "index",
+			Usage:  "generate dpm.index",
+			Action: doIndex,
 		},
 	}
 
