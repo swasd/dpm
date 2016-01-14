@@ -2,6 +2,7 @@ package provision
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"sort"
@@ -30,6 +31,14 @@ type Machine struct {
 	options map[string]interface{}
 	pre     []string
 	post    []string
+}
+
+func LoadFromFile(filename string) (*Spec, error) {
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	return Read(content)
 }
 
 func Read(yml []byte) (*Spec, error) {
@@ -83,6 +92,21 @@ func (s *Spec) Machines() []*Machine {
 	return result
 }
 
+func (s *Spec) Provision() error {
+	for _, m := range s.Machines() {
+		err := m.create()
+		if err != nil {
+			return err
+		}
+		// TODO logging outputs
+		_, err = m.executePostProvision()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *Machine) Name() string {
 	return m.name
 }
@@ -91,7 +115,7 @@ func (m *Machine) Driver() string {
 	return m.driver
 }
 
-func (m *Machine) CmdLine() []string {
+func (m *Machine) cmdLine() []string {
 	result := []string{"--driver", m.driver}
 	keys := []string{}
 	for k, _ := range m.options {
@@ -125,8 +149,8 @@ func (m *Machine) CmdLine() []string {
 	return result
 }
 
-func (m *Machine) Create() error {
-	args := append([]string{"-s", ".dpm", "create"}, m.CmdLine()...)
+func (m *Machine) create() error {
+	args := append([]string{"-s", ".dpm", "create"}, m.cmdLine()...)
 	cmd := exec.Command("docker-machine", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -134,7 +158,7 @@ func (m *Machine) Create() error {
 	return cmd.Run()
 }
 
-func (m *Machine) Delete() error {
+func (m *Machine) doDelete() error {
 	args := append([]string{"-s", ".dpm", "rm", "-y"}, m.name)
 	cmd := exec.Command("docker-machine", args...)
 	cmd.Stdin = os.Stdin
@@ -143,7 +167,7 @@ func (m *Machine) Delete() error {
 	return cmd.Run()
 }
 
-func (m *Machine) PostProvision() []string {
+func (m *Machine) postProvision() []string {
 	result := []string{}
 	for _, p := range m.post {
 		expanded := os.Expand(p, func(key string) string {
@@ -182,9 +206,9 @@ func (m *Machine) PostProvision() []string {
 	return result
 }
 
-func (m *Machine) ExecutePostProvision() ([]string, error) {
+func (m *Machine) executePostProvision() ([]string, error) {
 	out := []string{}
-	for _, p := range m.PostProvision() {
+	for _, p := range m.postProvision() {
 		args, err := shellwords.Parse(p)
 		if err != nil {
 			return []string{}, err
