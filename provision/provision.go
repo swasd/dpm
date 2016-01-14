@@ -115,6 +115,10 @@ func (m *Machine) CmdLine() []string {
 				result = append(result, "--"+k)
 				result = append(result, kk+"="+vv.(string))
 			}
+		case bool:
+			if val {
+				result = append(result, "--"+k)
+			}
 		}
 	}
 	result = append(result, m.name)
