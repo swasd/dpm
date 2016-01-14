@@ -1,8 +1,8 @@
 ---
 spec:
-  from: scratch
   name: test
-  version: 0.1.0-dev
+  version: 0.1.0.dev
+  type: docker
   provision: provision.yml
   composition: composition.yml
   dirs:

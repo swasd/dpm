@@ -44,7 +44,7 @@ func (p *Package) Save() error {
 	if err != nil {
 		return err
 	}
-	filename := spec.Name + "_" + spec.Version + ".dpm"
+	filename := spec.Name + "_" + spec.Version + "-" + spec.Type + ".dpm"
 	return p.SaveToFile(filename)
 }
 
@@ -55,8 +55,10 @@ func (p *Package) SaveToFile(filename string) error {
 type Spec struct {
 	Name        string
 	Version     string
+	Type        string
 	Provision   string
 	Composition string
+	Description string
 }
 
 func (p *Package) Spec() (*Spec, error) {
