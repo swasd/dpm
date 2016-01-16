@@ -13,6 +13,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/hashicorp/go-getter"
 	"github.com/swasd/dpm/build"
+	"github.com/swasd/dpm/composition"
 	"github.com/swasd/dpm/provision"
 )
 
@@ -79,6 +80,12 @@ func doInstall(c *cli.Context) {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+		err = generateIndex(filepath.Join(home, "/.dpm/cache/"),
+			filepath.Join(home, "/.dpm/index/"))
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	} else {
 		fmt.Println("Install from a remote repository")
 		err := getter.GetFile(filepath.Join(home, "/.dpm/index/", "dpm.index"), repo+"dpm.index")
@@ -106,10 +113,15 @@ func doInstall(c *cli.Context) {
 	}
 }
 
-func doRun(c *cli.Context) {
+func install(c *cli.Context) {
 	home := os.Getenv("HOME")
 	packageName := c.Args().First()
 	filename, hash := findDpmFromIndex(packageName)
+	if filename == "" {
+		fmt.Println("Cannot find index")
+		os.Exit(1)
+	}
+
 	packageFile := filepath.Join(home, "/.dpm/cache/", filename)
 	_, err := os.Stat(packageFile)
 	if err != nil {
@@ -130,18 +142,26 @@ func doRun(c *cli.Context) {
 	}
 
 	provisionFile := filepath.Join(home, "/.dpm/workspace", hash, packageSpec.Provision)
-	spec, err := provision.LoadFromFile(provisionFile)
+	provSpec, err := provision.LoadFromFile(provisionFile)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	spec.Provision()
+	err = provSpec.Provision()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
+	em := provSpec.ExportedMachine()
+
+	compose := composition.NewProject(em, packageSpec)
+	err = compose.Up()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
 
 func doBuild(c *cli.Context) {
@@ -162,34 +182,43 @@ func doBuild(c *cli.Context) {
 	}
 }
 
-func doIndex(c *cli.Context) {
-	dir := "."
-	if len(c.Args()) >= 1 {
-		dir = c.Args().First()
-	}
+func generateIndex(dir string, outdir string) error {
 	infos, err := ioutil.ReadDir(dir)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
-	dpmIndex, err := os.Create(dir + "/dpm.index")
+	os.MkdirAll(outdir, 0755)
+	dpmIndex, err := os.Create(outdir + "/dpm.index")
 	defer dpmIndex.Close()
 
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
+
 	for _, f := range infos {
 		if strings.HasSuffix(f.Name(), ".dpm") {
 			parts := strings.SplitN(f.Name(), "_", 2)
 			b, err := ioutil.ReadFile(dir + "/" + f.Name())
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				return err
 			}
 			hash := sha256.Sum256(b)
 			fmt.Fprintf(dpmIndex, "%s\t%s\t%s\n", parts[0], f.Name(), hex.EncodeToString(hash[:]))
 		}
+	}
+
+	return nil
+}
+
+func doIndex(c *cli.Context) {
+	dir := "."
+	if len(c.Args()) >= 1 {
+		dir = c.Args().First()
+	}
+	err := generateIndex(dir, dir)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -204,12 +233,7 @@ func main() {
 			Name:    "install",
 			Aliases: []string{"i"},
 			Usage:   "install the package",
-			Action:  doInstall,
-		},
-		{
-			Name:   "run",
-			Usage:  "install and run the package",
-			Action: doRun,
+			Action:  install,
 		},
 		{
 			Name:    "build",

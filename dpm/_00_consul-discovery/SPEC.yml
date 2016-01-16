@@ -1,0 +1,12 @@
+---
+spec:
+  name: consul-discovery
+  version: 0.1.0
+  provision: provision.yml
+  composition: composition.yml
+  title: Consul Discovery
+  description: >
+    This is a fundamental package to run
+    Consul as a discovery service
+    for Docker cluster.
+
