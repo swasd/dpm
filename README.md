@@ -5,7 +5,7 @@ Package Manager for Docker
 
 For example, to start a Consul discovery service you can just do:
 
-`$ dpm install redis-cluster`
+`$ dpm install consul-discovery`
 
 (c) Chanwit Kaewkasi / Suranaree University of Technology
 
