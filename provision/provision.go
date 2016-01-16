@@ -130,6 +130,10 @@ func (s *Spec) Machines() []*Machine {
 
 func (s *Spec) Provision() error {
 	for _, m := range s.Machines() {
+		// TODO force delete and re-create
+		if m.exist() {
+			continue
+		}
 		err := m.create()
 		if err != nil {
 			return err
@@ -138,6 +142,22 @@ func (s *Spec) Provision() error {
 		_, err = m.executePostProvision()
 		if err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func (s *Spec) RemoveMachines() error {
+	for _, m := range s.Machines() {
+		// TODO force delete and re-create
+		if m.exist() {
+			err := m.doDelete()
+			if err != nil {
+				err = m.forceDelete()
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
@@ -190,8 +210,29 @@ func dpmHome() string {
 	return filepath.Join(home, ".dpm")
 }
 
+func (m *Machine) exist() bool {
+	cmd := exec.Command("docker-machine", "-s", dpmHome(), "ls", "-f", "{{.Name}}", "--filter=name="+m.name)
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	if strings.TrimSpace(string(out)) == m.name {
+		return true
+	}
+	return false
+}
+
 func (m *Machine) create() error {
 	args := append([]string{"-s", dpmHome(), "create"}, m.cmdLine()...)
+	cmd := exec.Command("docker-machine", args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func (m *Machine) forceDelete() error {
+	args := append([]string{"-s", dpmHome(), "rm", "-f"}, m.name)
 	cmd := exec.Command("docker-machine", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

@@ -118,7 +118,7 @@ func install(c *cli.Context) {
 	packageName := c.Args().First()
 	filename, hash := findDpmFromIndex(packageName)
 	if filename == "" {
-		fmt.Println("Cannot find index")
+		fmt.Println("Cannot find package in the index")
 		os.Exit(1)
 	}
 
@@ -156,7 +156,12 @@ func install(c *cli.Context) {
 
 	em := provSpec.ExportedMachine()
 
-	compose := composition.NewProject(em, packageSpec)
+	compose, err := composition.NewProject(em, p)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	err = compose.Up()
 	if err != nil {
 		fmt.Println(err)
@@ -165,7 +170,8 @@ func install(c *cli.Context) {
 }
 
 func doBuild(c *cli.Context) {
-	outputDir := c.String("dir")
+	home := os.Getenv("HOME")
+	outputDir := os.ExpandEnv(c.String("dir"))
 	sourceDir := "."
 	if len(c.Args()) >= 1 {
 		sourceDir = c.Args().First()
@@ -174,12 +180,27 @@ func doBuild(c *cli.Context) {
 	p, err := build.BuildPackage(sourceDir)
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	err = p.SaveToDir(outputDir)
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
+	err = generateIndex(filepath.Join(home, "/.dpm/cache/"),
+		filepath.Join(home, "/.dpm/index/"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	packageSpec, err := p.Spec()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	fmt.Println(packageSpec.Name)
 }
 
 func generateIndex(dir string, outdir string) error {
@@ -222,6 +243,83 @@ func doIndex(c *cli.Context) {
 	}
 }
 
+func doRemove(c *cli.Context) {
+	home := os.Getenv("HOME")
+	packageName := c.Args().First()
+	filename, hash := findDpmFromIndex(packageName)
+	if filename == "" {
+		fmt.Println("Cannot find package in the index")
+		os.Exit(1)
+	}
+
+	packageFile := filepath.Join(home, "/.dpm/cache/", filename)
+	_, err := os.Stat(packageFile)
+	if err != nil {
+		// not existed
+		doInstall(c)
+	}
+
+	p, err := build.LoadPackage(packageFile)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	packageSpec, err := p.Spec()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	provisionFile := filepath.Join(home, "/.dpm/workspace", hash, packageSpec.Provision)
+	provSpec, err := provision.LoadFromFile(provisionFile)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = provSpec.RemoveMachines()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func doInfo(c *cli.Context) {
+	home := os.Getenv("HOME")
+	packageName := c.Args().First()
+	filename, hash := findDpmFromIndex(packageName)
+	if filename == "" {
+		fmt.Println("Cannot find package in the index")
+		os.Exit(1)
+	}
+
+	packageFile := filepath.Join(home, "/.dpm/cache/", filename)
+	_, err := os.Stat(packageFile)
+	if err != nil {
+		// not existed
+		doInstall(c)
+	}
+
+	p, err := build.LoadPackage(packageFile)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	packageSpec, err := p.Spec()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	fmt.Println("Package Information:")
+	fmt.Printf("  Title:   %s\n", packageSpec.Title)
+	fmt.Printf("  Name:    %s\n", packageSpec.Name)
+	fmt.Printf("  Version: %s\n", packageSpec.Version)
+	fmt.Printf("  SHA256:  %s\n", hash)
+	fmt.Printf("  %s\n", packageSpec.Description)
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "dpm"
@@ -242,7 +340,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "dir, d",
-					Value: ".",
+					Value: "$HOME/.dpm/cache",
 					Usage: "output directory",
 				},
 			},
@@ -252,6 +350,17 @@ func main() {
 			Name:   "index",
 			Usage:  "generate dpm.index",
 			Action: doIndex,
+		},
+		{
+			Name:    "remove",
+			Aliases: []string{"rm"},
+			Usage:   "remove the package",
+			Action:  doRemove,
+		},
+		{
+			Name:   "info",
+			Usage:  "show info of the package",
+			Action: doInfo,
 		},
 	}
 

@@ -3,6 +3,7 @@ package composition
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/swasd/dpm/build"
@@ -23,7 +24,7 @@ func NewProject(em provision.ExportedMachine, p *build.Package) (*Spec, error) {
 		return nil, err
 	}
 	hash := p.Sha256()
-	file := p.Composition
+	file := packageSpec.Composition
 
 	return &Spec{em.Name, em.Mode, hash, packageSpec.Name, file}, nil
 }
@@ -41,7 +42,9 @@ func (s *Spec) GetHostEnv() ([]string, error) {
 	for _, line := range lines {
 		parts := strings.SplitN(line, " ", 2)
 		if len(parts) == 2 && parts[0] == "export" {
-			result = append(result, parts[1])
+			entry := strings.SplitN(parts[1], "=", 2)
+			entry[1] = strings.TrimLeft(strings.TrimRight(entry[1], `"`), `"`)
+			result = append(result, entry[0]+"="+entry[1])
 		}
 	}
 	return result, nil
@@ -52,15 +55,22 @@ func dpmHome() string {
 	return filepath.Join(home, ".dpm")
 }
 
-func (s *Spec) Up() {
-	env := s.GetHostEnv()
+func (s *Spec) Up() error {
+	env, err := s.GetHostEnv()
+	if err != nil {
+		return err
+	}
 
 	home := os.Getenv("HOME")
 	cmd := exec.Command("docker-compose",
 		"-p", s.projectName,
 		"-f", s.compositionFile,
 		"up", "-d")
-	cmd.Env
-	cmd.Dir = filepath.Jon(home, ".dpm/workspace", hash)
+	cmd.Env = env
+	cmd.Dir = filepath.Join(home, ".dpm/workspace", s.hash)
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
 
+	return cmd.Run()
 }
