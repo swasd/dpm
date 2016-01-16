@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -20,6 +21,7 @@ type Spec struct {
 type MachineSpec struct {
 	Driver        string
 	Instances     *int
+	Export        bool
 	Options       map[string]interface{}
 	PreProvision  []string `yaml:"pre-provision,omitempty"`
 	PostProvision []string `yaml:"post-provision,omitempty"`
@@ -28,6 +30,7 @@ type MachineSpec struct {
 type Machine struct {
 	name    string
 	driver  string
+	export  bool
 	options map[string]interface{}
 	pre     []string
 	post    []string
@@ -60,6 +63,37 @@ func (s *Spec) Machine(name string) *Machine {
 	return nil
 }
 
+type ExportedMachine struct {
+	Name string
+	Mode ExportedMode
+}
+type ExportedMode string
+
+const (
+	Standalone = ExportedMode("standalone")
+	Swarm      = ExportedMode("swarm")
+)
+
+func (s *Spec) ExportedMachine() ExportedMachine {
+	for _, m := range s.Machines() {
+		if m.export {
+			_, exist := m.options["swarm-master"]
+			if exist {
+				return ExportedMachine{
+					m.name,
+					Swarm,
+				}
+			} else {
+				return ExportedMachine{
+					m.name,
+					Standalone,
+				}
+			}
+		}
+	}
+	return ExportedMachine{}
+}
+
 func (s *Spec) Machines() []*Machine {
 	result := []*Machine{}
 	for k, v := range s.MachineSpecs {
@@ -72,6 +106,7 @@ func (s *Spec) Machines() []*Machine {
 				name:    k,
 				driver:  v.Driver,
 				options: v.Options,
+				export:  v.Export,
 				pre:     v.PreProvision,
 				post:    v.PostProvision,
 			}
@@ -82,6 +117,7 @@ func (s *Spec) Machines() []*Machine {
 					name:    fmt.Sprintf("%s-%d", k, i),
 					driver:  v.Driver,
 					options: v.Options,
+					export:  false,
 					pre:     v.PreProvision,
 					post:    v.PostProvision,
 				}
@@ -149,8 +185,13 @@ func (m *Machine) cmdLine() []string {
 	return result
 }
 
+func dpmHome() string {
+	home := os.Getenv("HOME")
+	return filepath.Join(home, ".dpm")
+}
+
 func (m *Machine) create() error {
-	args := append([]string{"-s", ".dpm", "create"}, m.cmdLine()...)
+	args := append([]string{"-s", dpmHome(), "create"}, m.cmdLine()...)
 	cmd := exec.Command("docker-machine", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -159,7 +200,7 @@ func (m *Machine) create() error {
 }
 
 func (m *Machine) doDelete() error {
-	args := append([]string{"-s", ".dpm", "rm", "-y"}, m.name)
+	args := append([]string{"-s", dpmHome(), "rm", "-y"}, m.name)
 	cmd := exec.Command("docker-machine", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -188,7 +229,7 @@ func (m *Machine) postProvision() []string {
 					cmd = "ip"
 					arg = parts[1]
 				}
-				out, err := exec.Command("docker-machine", "-s", ".dpm", cmd, arg).Output()
+				out, err := exec.Command("docker-machine", "-s", dpmHome(), cmd, arg).Output()
 				if err != nil {
 					val = ""
 				}
