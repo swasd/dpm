@@ -91,6 +91,7 @@ func TestSpecInfo(t *testing.T) {
 }
 
 func TestResolveDependencies(t *testing.T) {
+	t.Skip()
 	p, err := BuildPackage("./_test")
 	assert.NoError(t, err)
 	err = p.SaveToFile("./_test/dir.dpm")
@@ -99,13 +100,13 @@ func TestResolveDependencies(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, len(p.content), len(p2.content))
 
-	spec, err := p2.Spec()
+	_, err = p2.Spec()
 	assert.NoError(t, err)
 
 	// "build" and "build -a" (clear and resolve all dependencies again)
-	for k, v := range spec.Dependencies {
-
-	}
+	// for k, v := range spec.Dependencies {
+	//
+	// }
 
 	// d, err := p2.ResolveDependencies()
 

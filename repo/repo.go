@@ -2,6 +2,7 @@ package repo
 
 import (
 	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -18,16 +19,31 @@ func Get(nameOrId string, version string) (*Entry, error) {
 		return nil, err
 	}
 
+	var entry *Entry
 	// if version is not specified, assume it may be an ID
 	if version == "" {
 		_, err := hex.DecodeString(nameOrId)
 		if err != nil {
-			return entries.FindByName(nameOrId), nil
+			entry = entries.FindByName(nameOrId)
 		}
-		return entries.findByPartialHash(nameOrId), nil
+		entry = entries.findByPartialHash(nameOrId)
 	}
 
-	return entries.findByNameAndVersion(nameOrId, version), nil
+	entry = entries.findByNameAndVersion(nameOrId, version)
+
+	if entry == nil {
+		return nil, fmt.Errorf("Entry not found")
+	}
+
+	home := os.Getenv("HOME")
+	err = getter.GetFile(
+		filepath.Join(home, ".dpm", "cache", entry.Filename),
+		Repo+entry.Filename)
+	if err != nil {
+		return nil, err
+	}
+
+	return entry, nil
 }
 
 type Entry struct {
