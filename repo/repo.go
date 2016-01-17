@@ -14,7 +14,40 @@ import (
 )
 
 func Get(nameOrId string, version string) (*Entry, error) {
-	entries, err := getIndex()
+	e, err := getLocal(nameOrId, version)
+	if err == nil {
+		return e, err
+	}
+	return getRemote(nameOrId, version)
+}
+
+func getLocal(nameOrId string, version string) (*Entry, error) {
+	entries, err := getLocalIndex()
+	if err != nil {
+		return nil, err
+	}
+
+	var entry *Entry
+	// if version is not specified, assume it may be an ID
+	if version == "" {
+		_, err := hex.DecodeString(nameOrId)
+		if err != nil {
+			entry = entries.FindByName(nameOrId)
+		}
+		entry = entries.findByPartialHash(nameOrId)
+	}
+
+	entry = entries.findByNameAndVersion(nameOrId, version)
+
+	if entry == nil {
+		return nil, fmt.Errorf("Entry not found")
+	}
+
+	return entry, nil
+}
+
+func getRemote(nameOrId string, version string) (*Entry, error) {
+	entries, err := getRemoteIndex()
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +158,17 @@ const (
 	Repo = "https://raw.githubusercontent.com/swasd/dpm-repo/master/"
 )
 
-func getIndex() (Entries, error) {
+func getLocalIndex() (Entries, error) {
+	home := os.Getenv("HOME")
+	entries, err := LoadIndex(filepath.Join(home, ".dpm", "index", "dpm.index"))
+	if err != nil {
+		return nil, err
+	}
+
+	return entries, nil
+}
+
+func getRemoteIndex() (Entries, error) {
 	home := os.Getenv("HOME")
 	err := getter.GetFile(filepath.Join(home, ".dpm", "index", "dpm.index.remote"), Repo+"dpm.index")
 	if err != nil {
