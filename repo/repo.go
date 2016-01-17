@@ -12,19 +12,23 @@ import (
 	"github.com/hashicorp/go-getter"
 )
 
-/*
-func Get(nameOrId string, version string) error {
+func Get(nameOrId string, version string) (*Entry, error) {
+	entries, err := getIndex()
+	if err != nil {
+		return nil, err
+	}
+
 	// if version is not specified, assume it may be an ID
 	if version == "" {
 		_, err := hex.DecodeString(nameOrId)
 		if err != nil {
-			return getByName(nameOrId)
+			return entries.FindByName(nameOrId), nil
 		}
-		return getById(nameOrId)
+		return entries.findByPartialHash(nameOrId), nil
 	}
 
-	return getByNameAndVersion(nameOrId, version)
-} */
+	return entries.findByNameAndVersion(nameOrId, version), nil
+}
 
 type Entry struct {
 	PackageName string
@@ -35,7 +39,7 @@ type Entry struct {
 
 type Entries []*Entry
 
-func (e Entries) findByName(packageName string) *Entry {
+func (e Entries) FindByName(packageName string) *Entry {
 	for _, ee := range e {
 		if ee.PackageName == packageName {
 			return ee

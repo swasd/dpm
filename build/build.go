@@ -29,12 +29,12 @@ func BuildPackage(dir string) (*Package, error) {
 	tarfile.Writer = tar.NewWriter(buf)
 
 	specContent, err := ioutil.ReadFile(filepath.Join(dir, "SPEC.yml"))
-	root := make(map[string]*Spec)
+	var root Root
 	err = yaml.Unmarshal(specContent, &root)
 	if err != nil {
 		return nil, err
 	}
-	spec := root["spec"]
+	spec := root.Spec
 
 	tarfile.AddFileWithName(filepath.Join(dir, "SPEC.yml"), "SPEC.yml")
 	tarfile.AddFileWithName(filepath.Join(dir, spec.Provision), spec.Provision)
@@ -42,6 +42,30 @@ func BuildPackage(dir string) (*Package, error) {
 	for _, d := range spec.Dirs {
 		tarfile.AddAll(filepath.Join(dir, d), true)
 	}
+
+	// resolve dependencies on build
+	// to gaurantee that the package will have
+	// the same behaviour everytime we deploy it
+
+	/*
+			allDependencies := []string{}
+			for name, attributes := range spec.Dependencies {
+				attrs := parse(attributes)
+				pack, err := repo.Get(name, attrs["version"])
+				allDependencies = append(allDependencies, pack.Dependencies()...)
+				// lookup
+				// not found, resolve
+				// patch
+				// collect into array
+			}
+				for _, d := range resolveDependencies {
+					//   - patch override attribute:
+					//   - tarfile.AddAll(hash)
+				}
+		for _, hash := range allDependencies {
+			tarfile.AddAll(workspace+"/"+hash, true)
+		}
+	*/
 	tarfile.Close()
 	return &Package{buf.Bytes()}, nil
 }
@@ -81,13 +105,19 @@ func (p *Package) SaveToFile(filename string) error {
 }
 
 type Spec struct {
-	Name        string
-	Version     string
-	Provision   string
-	Composition string
-	Title       string
-	Description string
-	Dirs        []string
+	Name         string
+	Version      string
+	Provision    string
+	Composition  string
+	Title        string
+	Description  string
+	Dirs         []string
+	Dependencies map[string]string // in `"package": version=number` format
+}
+
+type Root struct {
+	SpecVersion string `yaml:"specVersion"`
+	Spec        *Spec
 }
 
 func (p *Package) Spec() (*Spec, error) {
@@ -102,13 +132,17 @@ func (p *Package) Spec() (*Spec, error) {
 	if int64(n) != hdr.Size {
 		return nil, fmt.Errorf("Size not match")
 	}
-	root := make(map[string]*Spec)
+	root := Root{}
 	err = yaml.Unmarshal(specContent, &root)
 	if err != nil {
 		return nil, err
 	}
 
-	return root["spec"], nil
+	if root.SpecVersion != "0.1.0" {
+		return nil, fmt.Errorf("Spec version '%s' is not supported.", root.SpecVersion)
+	}
+
+	return root.Spec, nil
 }
 
 func (p *Package) platforms() (string, error) {
