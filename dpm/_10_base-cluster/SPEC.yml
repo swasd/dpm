@@ -1,4 +1,5 @@
 ---
+specVersion: 0.1.0
 spec:
   name: base-cluster
   # abstract package cannot start by itself, must be used by another package.

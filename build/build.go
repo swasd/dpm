@@ -18,6 +18,7 @@ import (
 	"github.com/jhoonb/archivex"
 	"github.com/mattn/go-shellwords"
 	"github.com/swasd/dpm/provision"
+	"github.com/swasd/dpm/repo"
 )
 
 type Package struct {
@@ -25,6 +26,8 @@ type Package struct {
 }
 
 func BuildPackage(dir string) (*Package, error) {
+	home := os.Getenv("HOME")
+
 	buf := new(bytes.Buffer)
 	tarfile := new(archivex.TarFile)
 	tarfile.Writer = tar.NewWriter(buf)
@@ -44,29 +47,38 @@ func BuildPackage(dir string) (*Package, error) {
 		tarfile.AddAll(filepath.Join(dir, d), true)
 	}
 
+	hashes := []string{}
 	// resolve dependencies on build
 	// to gaurantee that the package will have
 	// the same behaviour everytime we deploy it
-
-	/*
-			allDependencies := []string{}
-			for name, attributes := range spec.Dependencies {
-				attrs := parse(attributes)
-				pack, err := repo.Get(name, attrs["version"])
-				allDependencies = append(allDependencies, pack.Dependencies()...)
-				// lookup
-				// not found, resolve
-				// patch
-				// collect into array
-			}
-				for _, d := range resolveDependencies {
-					//   - patch override attribute:
-					//   - tarfile.AddAll(hash)
-				}
-		for _, hash := range allDependencies {
-			tarfile.AddAll(workspace+"/"+hash, true)
+	for name, attributes := range spec.Dependencies {
+		attrs, err := parse(attributes)
+		if err != nil {
+			return nil, err
 		}
-	*/
+
+		entry, err := repo.Get(name, attrs["version"])
+		if err != nil {
+			return nil, err
+		}
+
+		p, err := LoadPackage(filepath.Join(home, ".dpm", "cache", entry.Filename))
+		if err != nil {
+			return nil, err
+		}
+
+		err = p.ExtractIfNotExist()
+		if err != nil {
+			return nil, err
+		}
+
+		hashes = append(hashes, entry.Hash)
+	}
+
+	for _, h := range hashes {
+		tarfile.AddAll(filepath.Join(home, ".dpm", "workspace", h), true)
+	}
+
 	tarfile.Close()
 	return &Package{buf.Bytes()}, nil
 }
@@ -221,6 +233,19 @@ func (p *Package) provision() (*provision.Spec, error) {
 		return nil, fmt.Errorf("Size not match")
 	}
 	return provision.Read(provisionContent)
+}
+
+func (p *Package) ExtractIfNotExist() error {
+	home := os.Getenv("HOME")
+	hash := p.Sha256()
+	dir := filepath.Join(home, ".dpm", "workspace", hash)
+	_, err := os.Stat(dir)
+	if err != nil {
+		return p.Extract(dir)
+	}
+
+	// silently
+	return nil
 }
 
 func (p *Package) Extract(dest string) error {
