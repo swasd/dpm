@@ -106,6 +106,14 @@ func install(c *cli.Context) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	_, err = os.Stat(filepath.Join(home, ".dpm", "workspace", entry.Hash))
+	if err != nil {
+		err = p.Extract(filepath.Join(home, ".dpm", "workspace", entry.Hash))
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
 
 	packageSpec, err := p.Spec()
 	if err != nil {

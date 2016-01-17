@@ -33,11 +33,12 @@ func getLocal(nameOrId string, version string) (*Entry, error) {
 		_, err := hex.DecodeString(nameOrId)
 		if err != nil {
 			entry = entries.FindByName(nameOrId)
+		} else {
+			entry = entries.findByPartialHash(nameOrId)
 		}
-		entry = entries.findByPartialHash(nameOrId)
+	} else {
+		entry = entries.findByNameAndVersion(nameOrId, version)
 	}
-
-	entry = entries.findByNameAndVersion(nameOrId, version)
 
 	if entry == nil {
 		return nil, fmt.Errorf("Entry not found")
@@ -58,11 +59,12 @@ func getRemote(nameOrId string, version string) (*Entry, error) {
 		_, err := hex.DecodeString(nameOrId)
 		if err != nil {
 			entry = entries.FindByName(nameOrId)
+		} else {
+			entry = entries.findByPartialHash(nameOrId)
 		}
-		entry = entries.findByPartialHash(nameOrId)
+	} else {
+		entry = entries.findByNameAndVersion(nameOrId, version)
 	}
-
-	entry = entries.findByNameAndVersion(nameOrId, version)
 
 	if entry == nil {
 		return nil, fmt.Errorf("Entry not found")
