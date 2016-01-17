@@ -90,6 +90,14 @@ func TestSpecInfo(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestParseAttributes(t *testing.T) {
+	m, err := parse("version=1.0.1 instances=1 x=\"x y\" ")
+	assert.NoError(t, err)
+	assert.Equal(t, m["version"], "1.0.1")
+	assert.Equal(t, m["instances"], "1")
+	assert.Equal(t, m["x"], "x y")
+}
+
 func TestResolveDependencies(t *testing.T) {
 	t.Skip()
 	p, err := BuildPackage("./_test")

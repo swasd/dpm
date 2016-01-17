@@ -16,6 +16,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/jhoonb/archivex"
+	"github.com/mattn/go-shellwords"
 	"github.com/swasd/dpm/provision"
 )
 
@@ -284,4 +285,21 @@ func extractTarArchiveFile(header *tar.Header, dest string, input io.Reader) err
 	}
 
 	return nil
+}
+
+func parse(s string) (map[string]string, error) {
+	result := make(map[string]string)
+	list, err := shellwords.Parse(s)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, each := range list {
+		parts := strings.SplitN(each, "=", 2)
+		if len(parts) == 2 {
+			result[parts[0]] = parts[1]
+		}
+	}
+
+	return result, nil
 }
