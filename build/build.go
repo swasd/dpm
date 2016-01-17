@@ -29,7 +29,7 @@ func BuildPackage(dir string) (*Package, error) {
 	tarfile.Writer = tar.NewWriter(buf)
 
 	specContent, err := ioutil.ReadFile(filepath.Join(dir, "SPEC.yml"))
-	var root Root
+	root := Root{}
 	err = yaml.Unmarshal(specContent, &root)
 	if err != nil {
 		return nil, err
@@ -101,6 +101,7 @@ func (p *Package) SaveToDir(dir string) error {
 }
 
 func (p *Package) SaveToFile(filename string) error {
+	os.MkdirAll(filepath.Dir(filename), 0755)
 	return ioutil.WriteFile(filename, p.content, 0644)
 }
 

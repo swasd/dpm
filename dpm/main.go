@@ -181,9 +181,6 @@ func generateIndex(dir string, outdir string) error {
 		return err
 	}
 	os.MkdirAll(outdir, 0755)
-	dpmIndex, err := os.Create(outdir + "/dpm.index")
-	defer dpmIndex.Close()
-
 	if err != nil {
 		return err
 	}
@@ -191,7 +188,7 @@ func generateIndex(dir string, outdir string) error {
 	entries := make(repo.Entries, 0)
 	for _, f := range infos {
 		if strings.HasSuffix(f.Name(), ".dpm") {
-			p, err := build.LoadPackage(f.Name())
+			p, err := build.LoadPackage(filepath.Join(dir, f.Name()))
 			if err != nil {
 				return err
 			}
@@ -206,19 +203,24 @@ func generateIndex(dir string, outdir string) error {
 				f.Name(),
 				p.Sha256(),
 			})
-
 		}
 	}
-
-	return nil
+	return entries.Save(filepath.Join(outdir, "dpm.index"))
 }
 
 func doIndex(c *cli.Context) {
+	home := os.Getenv("HOME")
 	dir := "."
+	outdir := "."
 	if len(c.Args()) >= 1 {
 		dir = c.Args().First()
+		outdir = dir
+	} else if c.Bool("local") {
+		dir = filepath.Join(home, ".dpm", "cache")
+		outdir = filepath.Join(home, ".dpm", "index")
 	}
-	err := generateIndex(dir, dir)
+
+	err := generateIndex(dir, outdir)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -337,8 +339,14 @@ func main() {
 			Action: doBuild,
 		},
 		{
-			Name:   "index",
-			Usage:  "generate dpm.index",
+			Name:  "index",
+			Usage: "generate dpm.index",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "local",
+					Usage: "generate index for the local repository",
+				},
+			},
 			Action: doIndex,
 		},
 		{
