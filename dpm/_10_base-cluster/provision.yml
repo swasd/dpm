@@ -1,0 +1,27 @@
+---
+machines:
+  ocean-master:
+    driver: digitalocean
+    export: true
+    options:
+      digitalocean-image: debian-8-x64
+      engine-opt:
+        cluster-store: consul://${consul}:8500
+        cluster-advertise: eth0:2376
+      swarm: true
+      swarm-master: true
+      swarm-discovery: consul://${consul}:8500/discovery
+    post-provision:
+      - docker network create --driver overlay multihost
+
+  ocean:
+    driver: digitalocean
+    instances: 2
+    options:
+      digitalocean-image: debian-8-x64
+      engine-opt:
+        cluster-store: consul://${consul}:8500
+        cluster-advertise: eth0:2376
+      swarm: true
+      swarm-discovery: consul://${consul}:8500/discovery
+
