@@ -1,8 +1,8 @@
 ---
+specVersion: 0.1.0
 spec:
   name: test
   version: 0.1.0.dev
-  type: docker
   provision: provision.yml
   composition: composition.yml
   dirs:
@@ -11,4 +11,7 @@ spec:
   title: Test - dpm test package
   description: >
     This is a test package.
+  dependencies:
+    pack1: version=1.0
+    pack2: version=2.0
 

@@ -1,0 +1,12 @@
+---
+spec:
+  name: wordpress-cluster
+  version: 0.1.0
+  title: A simple wordpress cluster
+  provision: provision.yml
+  composition: composition.yml
+  dependencies:
+    base-cluster: version=${version} instances=3
+  description: >
+    A simple cluster for Wordpress. Starting 3 instances of machines
+    and deploy Wordpress onto them. Wordpress can be scaled via `docker-compose`.
