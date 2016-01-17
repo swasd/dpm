@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
-	"github.com/hashicorp/go-getter"
 	"github.com/swasd/dpm/build"
 	"github.com/swasd/dpm/composition"
 	"github.com/swasd/dpm/provision"
+	"github.com/swasd/dpm/repo"
 )
 
 func cp(src, dst string) (err error) {
@@ -45,24 +43,6 @@ func cp(src, dst string) (err error) {
 	return
 }
 
-var repo = "https://raw.githubusercontent.com/swasd/dpm-repo/master/"
-
-func findDpmFromIndex(packageName string) (dpm string, hash string) {
-	home := os.Getenv("HOME")
-	index, err := ioutil.ReadFile(filepath.Join(home, "/.dpm/index/", "dpm.index"))
-	if err != nil {
-		return "", ""
-	}
-	lines := strings.Split(string(index), "\n")
-	for _, line := range lines {
-		parts := strings.SplitN(line, "\t", 3)
-		if parts[0] == packageName {
-			return parts[1], parts[2]
-		}
-	}
-	return "", ""
-}
-
 func doInstall(c *cli.Context) {
 	home := os.Getenv("HOME")
 	packageName := c.Args().First()
@@ -88,15 +68,7 @@ func doInstall(c *cli.Context) {
 		}
 	} else {
 		fmt.Println("Install from a remote repository")
-		err := getter.GetFile(filepath.Join(home, "/.dpm/index/", "dpm.index"), repo+"dpm.index")
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		// TODO merge index
-		filename, _ := findDpmFromIndex(packageName)
-		packageFile = filepath.Join(home, "/.dpm/cache", filename)
-		err = getter.GetFile(packageFile, repo+filename)
+		_, err = repo.Get(packageName, "")
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -116,14 +88,14 @@ func doInstall(c *cli.Context) {
 func install(c *cli.Context) {
 	home := os.Getenv("HOME")
 	packageName := c.Args().First()
-	filename, hash := findDpmFromIndex(packageName)
-	if filename == "" {
+	entry, err := repo.Get(packageName, "")
+	if err != nil {
 		fmt.Println("Cannot find package in the index")
 		os.Exit(1)
 	}
 
-	packageFile := filepath.Join(home, "/.dpm/cache/", filename)
-	_, err := os.Stat(packageFile)
+	packageFile := filepath.Join(home, "/.dpm/cache/", entry.Filename)
+	_, err = os.Stat(packageFile)
 	if err != nil {
 		// not existed
 		doInstall(c)
@@ -141,7 +113,7 @@ func install(c *cli.Context) {
 		os.Exit(1)
 	}
 
-	provisionFile := filepath.Join(home, "/.dpm/workspace", hash, packageSpec.Provision)
+	provisionFile := filepath.Join(home, "/.dpm/workspace", entry.Hash, packageSpec.Provision)
 	provSpec, err := provision.LoadFromFile(provisionFile)
 	if err != nil {
 		fmt.Println(err)
@@ -216,15 +188,25 @@ func generateIndex(dir string, outdir string) error {
 		return err
 	}
 
+	entries := make(repo.Entries, 0)
 	for _, f := range infos {
 		if strings.HasSuffix(f.Name(), ".dpm") {
-			parts := strings.SplitN(f.Name(), "_", 2)
-			b, err := ioutil.ReadFile(dir + "/" + f.Name())
+			p, err := build.LoadPackage(f.Name())
 			if err != nil {
 				return err
 			}
-			hash := sha256.Sum256(b)
-			fmt.Fprintf(dpmIndex, "%s\t%s\t%s\n", parts[0], f.Name(), hex.EncodeToString(hash[:]))
+			s, err := p.Spec()
+			if err != nil {
+				return err
+			}
+
+			entries = append(entries, &repo.Entry{
+				s.Name,
+				s.Version,
+				f.Name(),
+				p.Sha256(),
+			})
+
 		}
 	}
 
@@ -246,14 +228,20 @@ func doIndex(c *cli.Context) {
 func doRemove(c *cli.Context) {
 	home := os.Getenv("HOME")
 	packageName := c.Args().First()
-	filename, hash := findDpmFromIndex(packageName)
-	if filename == "" {
+	e, err := repo.LoadIndex(filepath.Join(home, ".dpm", "index", "dpm.index"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	entry := e.FindByName(packageName)
+	if entry == nil {
 		fmt.Println("Cannot find package in the index")
 		os.Exit(1)
 	}
 
-	packageFile := filepath.Join(home, "/.dpm/cache/", filename)
-	_, err := os.Stat(packageFile)
+	packageFile := filepath.Join(home, "/.dpm/cache/", entry.Filename)
+	_, err = os.Stat(packageFile)
 	if err != nil {
 		// not existed
 		doInstall(c)
@@ -271,7 +259,7 @@ func doRemove(c *cli.Context) {
 		os.Exit(1)
 	}
 
-	provisionFile := filepath.Join(home, "/.dpm/workspace", hash, packageSpec.Provision)
+	provisionFile := filepath.Join(home, "/.dpm/workspace", entry.Hash, packageSpec.Provision)
 	provSpec, err := provision.LoadFromFile(provisionFile)
 	if err != nil {
 		fmt.Println(err)
@@ -288,14 +276,16 @@ func doRemove(c *cli.Context) {
 func doInfo(c *cli.Context) {
 	home := os.Getenv("HOME")
 	packageName := c.Args().First()
-	filename, hash := findDpmFromIndex(packageName)
-	if filename == "" {
+	e, err := repo.LoadIndex(filepath.Join(home, ".dpm", "index", "dpm.index"))
+
+	entry := e.FindByName(packageName)
+	if entry == nil {
 		fmt.Println("Cannot find package in the index")
 		os.Exit(1)
 	}
 
-	packageFile := filepath.Join(home, "/.dpm/cache/", filename)
-	_, err := os.Stat(packageFile)
+	packageFile := filepath.Join(home, "/.dpm/cache/", entry.Filename)
+	_, err = os.Stat(packageFile)
 	if err != nil {
 		// not existed
 		doInstall(c)
@@ -316,7 +306,7 @@ func doInfo(c *cli.Context) {
 	fmt.Printf("  Title:   %s\n", packageSpec.Title)
 	fmt.Printf("  Name:    %s\n", packageSpec.Name)
 	fmt.Printf("  Version: %s\n", packageSpec.Version)
-	fmt.Printf("  SHA256:  %s\n", hash)
+	fmt.Printf("  SHA256:  %s\n", p.Sha256())
 	fmt.Printf("  %s\n", packageSpec.Description)
 }
 

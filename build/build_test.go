@@ -74,6 +74,8 @@ func TestSpecInfo(t *testing.T) {
 	assert.Equal(t, len(p.content), len(p2.content))
 
 	spec, err := p2.Spec()
+	assert.NoError(t, err)
+
 	assert.Equal(t, spec.Provision, "provision.yml")
 	assert.Equal(t, spec.Composition, "composition.yml")
 	assert.Equal(t, spec.Title, "Test - dpm test package")
@@ -81,11 +83,30 @@ func TestSpecInfo(t *testing.T) {
 	assert.Equal(t, spec.Version, "0.1.0.dev")
 	assert.Equal(t, spec.Description, "This is a test package.\n")
 	assert.Equal(t, spec.Dirs, []string{"web", "back"})
+	assert.Equal(t, spec.Dependencies["pack1"], "version=1.0")
+	assert.Equal(t, spec.Dependencies["pack2"], "version=2.0")
 
 	err = os.Remove("./_test/dir.dpm")
 	assert.NoError(t, err)
 }
 
-func TestBuildAddingFilesPerSpec(t *testing.T) {
+func TestResolveDependencies(t *testing.T) {
+	p, err := BuildPackage("./_test")
+	assert.NoError(t, err)
+	err = p.SaveToFile("./_test/dir.dpm")
+	assert.NoError(t, err)
+	p2, err := LoadPackage("./_test/dir.dpm")
+	assert.NoError(t, err)
+	assert.Equal(t, len(p.content), len(p2.content))
+
+	spec, err := p2.Spec()
+	assert.NoError(t, err)
+
+	// "build" and "build -a" (clear and resolve all dependencies again)
+	for k, v := range spec.Dependencies {
+
+	}
+
+	// d, err := p2.ResolveDependencies()
 
 }
