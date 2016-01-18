@@ -6,7 +6,6 @@ machines:
     export: true
     options:
       digitalocean-image: debian-8-x64
-      digitalocean-region: sgp1
 
 # Encapsulation property
 # This provision is privately locked to a machine provisioned by
