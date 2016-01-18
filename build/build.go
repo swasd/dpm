@@ -392,7 +392,7 @@ func extractTarArchiveFile(header *tar.Header, dest string, input io.Reader) err
 	} else {
 		// already exist
 		if isHash {
-			if _, err := os.Stat(filepath.Dir(filePath)); err == nil {
+			if _, err := os.Stat(filePath); err == nil {
 				return nil
 			}
 		}
