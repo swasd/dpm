@@ -101,7 +101,7 @@ func TestGetDeps(t *testing.T) {
 	assert.Equal(t, len(p.content), len(p2.content))
 
 	deps, err := p2.Deps()
-	assert.Equal(t, len(deps), 1)
+	assert.Equal(t, len(deps), 3)
 
 	err = os.Remove("./_test/dir.dpm")
 	assert.NoError(t, err)
