@@ -20,7 +20,6 @@ machines:
     instances: 2
     options:
       digitalocean-image: debian-8-x64
-      digitalocean-region: sgp1
       engine-opt:
         cluster-store: consul://${consul}:8500
         cluster-advertise: eth0:2376

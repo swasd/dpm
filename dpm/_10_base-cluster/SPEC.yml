@@ -2,8 +2,6 @@
 specVersion: 0.1.0
 spec:
   name: base-cluster
-  # abstract package cannot start by itself, must be used by another package.
-  # abstract: true
   version: 0.1.0
   title: Base cluster package
   dependencies:
@@ -13,4 +11,5 @@ spec:
   description: >
     This package provides a Swarm master and a set of nodes
     that form cluster via the consul discovery service.
-    An overlay network is pre-configured and available as the `multihost` network.
+    An overlay network is pre-configured 
+    and available as the `multihost` network.
