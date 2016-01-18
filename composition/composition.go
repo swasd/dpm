@@ -18,15 +18,8 @@ type Spec struct {
 	compositionFile string
 }
 
-func NewProject(em provision.ExportedMachine, p *build.Package) (*Spec, error) {
-	packageSpec, err := p.Spec()
-	if err != nil {
-		return nil, err
-	}
-	hash := p.Sha256()
-	file := packageSpec.Composition
-
-	return &Spec{em.Name, em.Mode, hash, packageSpec.Name, file}, nil
+func NewProject(em provision.ExportedMachine, hash string, s *build.Spec) (*Spec, error) {
+	return &Spec{em.Name, em.Mode, hash, s.Name, s.Composition}, nil
 }
 
 func (s *Spec) GetHostEnv() ([]string, error) {
@@ -56,18 +49,30 @@ func dpmHome() string {
 }
 
 func (s *Spec) Up() error {
+	home := os.Getenv("HOME")
+	dir := filepath.Join(home, ".dpm", "workspace", s.hash)
+
+	info, err := os.Stat(filepath.Join(dir, s.compositionFile))
+	if err != nil {
+		return err
+	}
+
+	if info.Size() == int64(0) {
+		// peacefully skip
+		return nil
+	}
+
 	env, err := s.GetHostEnv()
 	if err != nil {
 		return err
 	}
 
-	home := os.Getenv("HOME")
 	cmd := exec.Command("docker-compose",
 		"-p", s.projectName,
 		"-f", s.compositionFile,
 		"up", "-d")
 	cmd.Env = env
-	cmd.Dir = filepath.Join(home, ".dpm/workspace", s.hash)
+	cmd.Dir = dir
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout

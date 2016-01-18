@@ -183,6 +183,7 @@ func (m *Machine) cmdLine() []string {
 		switch val := v.(type) {
 		case string:
 			result = append(result, "--"+k)
+			val = os.Expand(val, func(key string) string { return m.expand(key) })
 			result = append(result, val)
 		case map[interface{}]interface{}:
 			keys := []string{}
@@ -193,7 +194,8 @@ func (m *Machine) cmdLine() []string {
 			for _, kk := range keys {
 				vv := val[kk]
 				result = append(result, "--"+k)
-				result = append(result, kk+"="+vv.(string))
+				evv := os.Expand(vv.(string), func(key string) string { return m.expand(key) })
+				result = append(result, kk+"="+evv)
 			}
 		case bool:
 			if val {
@@ -249,39 +251,43 @@ func (m *Machine) doDelete() error {
 	return cmd.Run()
 }
 
+func (m *Machine) expand(key string) string {
+
+	if key == "self" {
+		return m.name
+	}
+
+	val := os.Getenv(key)
+	if val == "" {
+		parts := strings.SplitN(key, " ", 2)
+		cmd := ""
+		arg := ""
+		if len(parts) == 1 {
+			cmd = "ip"
+			arg = parts[0]
+		} else if len(parts) == 2 && parts[0] == "ip" {
+			cmd = "ip"
+			arg = parts[1]
+		}
+		out, err := exec.Command("docker-machine", "-s", dpmHome(), cmd, arg).Output()
+		if err != nil {
+			val = ""
+		}
+
+		val = strings.TrimSpace(string(out))
+		if cmd == "ip" {
+			parts := strings.SplitN(val, ":", 2)
+			val = parts[0]
+		}
+	}
+	return val
+}
+
 func (m *Machine) postProvision() []string {
 	result := []string{}
 	for _, p := range m.post {
 		expanded := os.Expand(p, func(key string) string {
-
-			if key == "self" {
-				return m.name
-			}
-
-			val := os.Getenv(key)
-			if val == "" {
-				parts := strings.SplitN(key, " ", 2)
-				cmd := ""
-				arg := ""
-				if len(parts) == 1 {
-					cmd = "ip"
-					arg = parts[0]
-				} else if len(parts) == 2 && parts[0] == "ip" {
-					cmd = "ip"
-					arg = parts[1]
-				}
-				out, err := exec.Command("docker-machine", "-s", dpmHome(), cmd, arg).Output()
-				if err != nil {
-					val = ""
-				}
-
-				val = strings.TrimSpace(string(out))
-				if cmd == "ip" {
-					parts := strings.SplitN(val, ":", 2)
-					val = parts[0]
-				}
-			}
-			return val
+			return m.expand(key)
 		})
 		result = append(result, expanded)
 	}

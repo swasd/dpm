@@ -106,6 +106,9 @@ func install(c *cli.Context) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	// extract the package
+	// it will extract all dependencies in process
 	_, err = os.Stat(filepath.Join(home, ".dpm", "workspace", entry.Hash))
 	if err != nil {
 		err = p.Extract(filepath.Join(home, ".dpm", "workspace", entry.Hash))
@@ -115,37 +118,49 @@ func install(c *cli.Context) {
 		}
 	}
 
-	packageSpec, err := p.Spec()
+	hashes, err := p.Order()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	fmt.Println("Dependencies resolved ...")
 
-	provisionFile := filepath.Join(home, "/.dpm/workspace", entry.Hash, packageSpec.Provision)
-	provSpec, err := provision.LoadFromFile(provisionFile)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	for _, hash := range hashes {
 
-	err = provSpec.Provision()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+		packageSpec, err := build.ReadSpec(hash)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 
-	em := provSpec.ExportedMachine()
+		fmt.Printf("Installing %s:%s ...\n", packageSpec.Name, packageSpec.Version)
 
-	compose, err := composition.NewProject(em, p)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+		provisionFile := filepath.Join(home, ".dpm", "workspace", hash, packageSpec.Provision)
+		provSpec, err := provision.LoadFromFile(provisionFile)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 
-	err = compose.Up()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		err = provSpec.Provision()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		em := provSpec.ExportedMachine()
+
+		compose, err := composition.NewProject(em, hash, packageSpec)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		err = compose.Up()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 }
 
