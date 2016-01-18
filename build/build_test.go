@@ -10,6 +10,7 @@ import (
 func TestBuild(t *testing.T) {
 	p, err := BuildPackage("./_test")
 	assert.NoError(t, err)
+	assert.NotNil(t, p)
 	err = p.SaveToFile("./_test/dir.dpm")
 	assert.NoError(t, err)
 	p2, err := LoadPackage("./_test/dir.dpm")
@@ -101,10 +102,13 @@ func TestParseAttributes(t *testing.T) {
 func TestMergeDepGraph(t *testing.T) {
 	g1 := make(DepGraph)
 	g1["a"] = []string{"b", "c"}
+	g1["b"] = []string{"a", "b", "c"}
 
 	g2 := make(DepGraph)
 	g2["a"] = []string{"c", "d"}
+	g2["b"] = []string{"d", "b", "c", "a"}
 
 	out := merge(g1, g2)
-	assert.Equal(t, g2["a"], []string{"b", "c", "d"})
+	assert.Equal(t, out["a"], []string{"b", "c", "d"})
+	assert.Equal(t, out["b"], []string{"a", "b", "c", "d"})
 }
