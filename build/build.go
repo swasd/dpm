@@ -167,7 +167,7 @@ func (p *Package) Spec() (*Spec, error) {
 
 type DepGraph map[string][]string
 
-func (p *Package) Deps() (*Deps, error) {
+func (p *Package) Deps() (DepGraph, error) {
 	br := bytes.NewReader(p.content)
 	tr := tar.NewReader(br)
 	hdr, err := tr.Next()
@@ -180,7 +180,8 @@ func (p *Package) Deps() (*Deps, error) {
 		}
 		hdr, err = tr.Next()
 		if err != nil {
-			return nil, fmt.Errorf("Error finding Deps")
+			// if DEPS file is not found, return an empty graph
+			return make(DepGraph), nil
 		}
 	}
 	depsContent := make([]byte, hdr.Size)
@@ -189,7 +190,7 @@ func (p *Package) Deps() (*Deps, error) {
 		return nil, fmt.Errorf("Size not match")
 	}
 	graph := make(DepGraph)
-	err = yaml.Unmarshal(specContent, &graph)
+	err = yaml.Unmarshal(depsContent, &graph)
 	if err != nil {
 		return nil, err
 	}
@@ -385,6 +386,19 @@ func parse(s string) (map[string]string, error) {
 	return result, nil
 }
 
+func removeDuplicates(a []string) []string {
+	result := []string{}
+	seen := map[string]string{}
+	for _, val := range a {
+		if _, ok := seen[val]; !ok {
+			result = append(result, val)
+			seen[val] = val
+		}
+	}
+	sort.Strings(result)
+	return result
+}
+
 func merge(g, d DepGraph) DepGraph {
 	for k, v := range d {
 		vv, exist := g[k]
@@ -392,6 +406,10 @@ func merge(g, d DepGraph) DepGraph {
 			v = append(v, vv...)
 		}
 		g[k] = v
+	}
+
+	for k, v := range g {
+		g[k] = removeDuplicates(v)
 	}
 	return g
 }
