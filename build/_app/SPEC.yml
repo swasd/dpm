@@ -1,0 +1,13 @@
+---
+specVersion: 0.1.0
+spec:
+  name: app
+  version: 0.1.0
+  provision: provision.yml
+  composition: composition.yml
+  title: App - dpm package
+  description: >
+    This is app package.
+  dependencies:
+    test: version=0.1.0.dev
+
