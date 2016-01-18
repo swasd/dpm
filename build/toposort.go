@@ -1,8 +1,6 @@
 package build
 
-type graph map[string][]string
-
-func toposort(g graph) (order, cyclic []string) {
+func toposort(g DepGraph) (order, cyclic []string) {
 	L := make([]string, len(g))
 	i := len(L)
 	temp := map[string]bool{}

@@ -6,7 +6,7 @@ import (
 )
 
 func TestToposort(t *testing.T) {
-	g := make(graph)
+	g := make(DepGraph)
 	g["a"] = []string{"b", "c"}
 	g["c"] = []string{"b", "d"}
 	g["b"] = []string{"d", "e"}

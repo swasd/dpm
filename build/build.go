@@ -106,7 +106,15 @@ func BuildPackage(dir string) (*Package, error) {
 	}
 	tarfile.Add("DEPS", depsContent)
 
-	for _, h := range hashes {
+	order, cyclic := toposort(graph)
+	if len(cyclic) != 0 {
+		return nil, fmt.Errorf("Dependency cyclic detected")
+	}
+
+	for _, h := range order {
+		if h == "this" {
+			continue
+		}
 		tarfile.AddAll(filepath.Join(home, ".dpm", "workspace", h), true)
 	}
 
@@ -190,7 +198,9 @@ func (p *Package) Deps() (DepGraph, error) {
 		hdr, err = tr.Next()
 		if err != nil {
 			// if DEPS file is not found, return an empty graph
-			return make(DepGraph), nil
+			empty := make(DepGraph)
+			empty[p.Sha256()] = []string{}
+			return empty, nil
 		}
 	}
 	depsContent := make([]byte, hdr.Size)
@@ -316,7 +326,7 @@ func (p *Package) Extract(dest string) error {
 			return err
 		}
 
-		if hdr.Name == "." {
+		if hdr.Name == "." || hdr.Name == "DEPS" {
 			continue
 		}
 
