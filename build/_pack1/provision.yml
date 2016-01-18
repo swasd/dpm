@@ -1,0 +1,14 @@
+---
+machines:
+  fake-master:
+    driver: digitalocean
+ 
+  fake:
+    instances: 2
+    driver: none
+    options:
+      url: tcp://1.2.3.4:1234
+      engine-install-url: https://test.docker.com
+      engine-opt:
+        cluster-store: consul://192.168.1.81:8500
+        cluster-advertise: eth0:2376

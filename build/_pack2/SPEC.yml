@@ -1,0 +1,11 @@
+---
+specVersion: 0.1.0
+spec:
+  name: pack2
+  version: "2.0"
+  provision: provision.yml
+  composition: composition.yml
+  title: Pack 2
+  description: >
+    This is Pack 2
+
