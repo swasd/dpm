@@ -123,8 +123,9 @@ func install(c *cli.Context) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	fmt.Println("Dependencies resolved ...")
+	fmt.Println("Dependencies resolved...")
 
+	var em provision.ExportedMachine
 	for _, hash := range hashes {
 
 		packageSpec, err := build.ReadSpec(hash)
@@ -133,7 +134,7 @@ func install(c *cli.Context) {
 			os.Exit(1)
 		}
 
-		fmt.Printf("Installing %s:%s ...\n", packageSpec.Name, packageSpec.Version)
+		fmt.Printf("Installing %s:%s (%s)...\n", packageSpec.Name, packageSpec.Version, hash[0:8])
 
 		provisionFile := filepath.Join(home, ".dpm", "workspace", hash, packageSpec.Provision)
 		provSpec, err := provision.LoadFromFile(provisionFile)
@@ -148,7 +149,7 @@ func install(c *cli.Context) {
 			os.Exit(1)
 		}
 
-		em := provSpec.ExportedMachine()
+		em = provSpec.ExportedMachine()
 
 		compose, err := composition.NewProject(em, hash, packageSpec)
 		if err != nil {
@@ -162,6 +163,16 @@ func install(c *cli.Context) {
 			os.Exit(1)
 		}
 	}
+
+	flag := ""
+	mode := "engine"
+	if em.Mode == provision.Swarm {
+		flag = "--swarm "
+		mode = "cluster"
+	}
+	fmt.Printf("\nExported machine is %s.\n", em.Name)
+	fmt.Printf("Run \"docker-machine env %s%s\" to see how to connect to your Docker %s.\n", flag, em.Name, mode)
+
 }
 
 func doBuild(c *cli.Context) {

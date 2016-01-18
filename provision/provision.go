@@ -138,6 +138,7 @@ func (s *Spec) Provision() error {
 		if err != nil {
 			return err
 		}
+
 		// TODO logging outputs
 		_, err = m.executePostProvision()
 		if err != nil {
@@ -318,8 +319,13 @@ func (m *Machine) GetEnv() []string {
 }
 
 func (m *Machine) executePostProvision() ([]string, error) {
+
+	fmt.Println("Executing post-provision commands...")
+
 	out := []string{}
 	for _, p := range m.postProvision() {
+
+		fmt.Printf("  ... '%s'\n", p)
 		args, err := shellwords.Parse(p)
 		if err != nil {
 			return []string{}, err
