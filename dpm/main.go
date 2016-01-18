@@ -94,7 +94,7 @@ func install(c *cli.Context) {
 		os.Exit(1)
 	}
 
-	packageFile := filepath.Join(home, "/.dpm/cache/", entry.Filename)
+	packageFile := filepath.Join(home, ".dpm", "cache", entry.Filename)
 	_, err = os.Stat(packageFile)
 	if err != nil {
 		// not existed

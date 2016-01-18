@@ -25,6 +25,22 @@ type Package struct {
 	content []byte
 }
 
+type Spec struct {
+	Name         string
+	Version      string
+	Provision    string
+	Composition  string
+	Title        string
+	Description  string
+	Dirs         []string
+	Dependencies map[string]string // in `"package": version=number` format
+}
+
+type Root struct {
+	SpecVersion string `yaml:"specVersion"`
+	Spec        *Spec
+}
+
 func BuildPackage(dir string) (*Package, error) {
 	home := os.Getenv("HOME")
 
@@ -48,6 +64,7 @@ func BuildPackage(dir string) (*Package, error) {
 	}
 
 	hashes := []string{}
+	graph := make(DepGraph)
 	// resolve dependencies on build
 	// to gaurantee that the package will have
 	// the same behaviour everytime we deploy it
@@ -73,6 +90,11 @@ func BuildPackage(dir string) (*Package, error) {
 		}
 
 		hashes = append(hashes, entry.Hash)
+		deps, err := p.Deps()
+		if err != nil {
+			return nil, err
+		}
+		graph = merge(graph, deps)
 	}
 
 	for _, h := range hashes {
@@ -118,22 +140,6 @@ func (p *Package) SaveToFile(filename string) error {
 	return ioutil.WriteFile(filename, p.content, 0644)
 }
 
-type Spec struct {
-	Name         string
-	Version      string
-	Provision    string
-	Composition  string
-	Title        string
-	Description  string
-	Dirs         []string
-	Dependencies map[string]string // in `"package": version=number` format
-}
-
-type Root struct {
-	SpecVersion string `yaml:"specVersion"`
-	Spec        *Spec
-}
-
 func (p *Package) Spec() (*Spec, error) {
 	br := bytes.NewReader(p.content)
 	tr := tar.NewReader(br)
@@ -157,6 +163,38 @@ func (p *Package) Spec() (*Spec, error) {
 	}
 
 	return root.Spec, nil
+}
+
+type DepGraph map[string][]string
+
+func (p *Package) Deps() (*Deps, error) {
+	br := bytes.NewReader(p.content)
+	tr := tar.NewReader(br)
+	hdr, err := tr.Next()
+	if err != nil {
+		return nil, fmt.Errorf("Error finding Deps")
+	}
+	for {
+		if hdr.Name == "DEPS" {
+			break
+		}
+		hdr, err = tr.Next()
+		if err != nil {
+			return nil, fmt.Errorf("Error finding Deps")
+		}
+	}
+	depsContent := make([]byte, hdr.Size)
+	n, err := io.ReadFull(tr, depsContent)
+	if int64(n) != hdr.Size {
+		return nil, fmt.Errorf("Size not match")
+	}
+	graph := make(DepGraph)
+	err = yaml.Unmarshal(specContent, &graph)
+	if err != nil {
+		return nil, err
+	}
+
+	return graph, nil
 }
 
 func (p *Package) platforms() (string, error) {
@@ -279,7 +317,18 @@ func (p *Package) Extract(dest string) error {
 }
 
 func extractTarArchiveFile(header *tar.Header, dest string, input io.Reader) error {
+	home := os.Getenv("HOME")
+
+	// check if dir has a leading hash
+	maybeHash := filepath.Dir(header.Name)
+	_, err := hex.DecodeString(maybeHash)
+	isHash := err == nil
+
 	filePath := filepath.Join(dest, header.Name)
+	if isHash {
+		filePath = filepath.Join(home, ".dpm", "workspace", header.Name)
+	}
+
 	fileInfo := header.FileInfo()
 
 	if fileInfo.IsDir() {
@@ -288,6 +337,13 @@ func extractTarArchiveFile(header *tar.Header, dest string, input io.Reader) err
 			return err
 		}
 	} else {
+		// already exist
+		if isHash {
+			if _, err := os.Stat(filepath.Dir(filePath)); err == nil {
+				return nil
+			}
+		}
+
 		err := os.MkdirAll(filepath.Dir(filePath), 0755)
 		if err != nil {
 			return err
@@ -327,4 +383,15 @@ func parse(s string) (map[string]string, error) {
 	}
 
 	return result, nil
+}
+
+func merge(g, d DepGraph) DepGraph {
+	for k, v := range d {
+		vv, exist := g[k]
+		if exist {
+			v = append(v, vv...)
+		}
+		g[k] = v
+	}
+	return g
 }
