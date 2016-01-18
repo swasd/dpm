@@ -130,6 +130,26 @@ func LoadPackage(filename string) (*Package, error) {
 	return &Package{content}, nil
 }
 
+func ReadSpec(hash string) (*Spec, error) {
+	home := os.Getenv("HOME")
+	specContent, err := ioutil.ReadFile(filepath.Join(home, ".dpm", "workspace", hash, "SPEC.yml"))
+	if err != nil {
+		return nil, err
+	}
+
+	root := Root{}
+	err = yaml.Unmarshal(specContent, &root)
+	if err != nil {
+		return nil, err
+	}
+
+	if root.SpecVersion != "0.1.0" {
+		return nil, fmt.Errorf("Spec version '%s' is not supported.", root.SpecVersion)
+	}
+
+	return root.Spec, nil
+}
+
 func (p *Package) Save() error {
 	return p.SaveToDir(".")
 }
@@ -218,6 +238,16 @@ func (p *Package) Deps() (DepGraph, error) {
 	delete(graph, "this")
 
 	return graph, nil
+}
+
+func (p *Package) Order() ([]string, error) {
+	graph, err := p.Deps()
+	if err != nil {
+		return nil, err
+	}
+	// skip cyclic check because it already prevents when building the package
+	order, _ := toposort(graph)
+	return order, nil
 }
 
 func (p *Package) platforms() (string, error) {

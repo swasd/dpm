@@ -2,7 +2,7 @@ package build
 
 func toposort(g DepGraph) (order, cyclic []string) {
 	L := make([]string, len(g))
-	i := len(L)
+	i := 0
 	temp := map[string]bool{}
 	perm := map[string]bool{}
 	var cycleFound bool
@@ -32,8 +32,8 @@ func toposort(g DepGraph) (order, cyclic []string) {
 		}
 		delete(temp, n)
 		perm[n] = true
-		i--
 		L[i] = n
+		i++
 	}
 	for n := range g {
 		if perm[n] {
