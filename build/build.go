@@ -97,6 +97,15 @@ func BuildPackage(dir string) (*Package, error) {
 		graph = merge(graph, deps)
 	}
 
+	// add entry of this package before save to DEPS
+	graph["this"] = hashes
+
+	depsContent, err := yaml.Marshal(graph)
+	if err != nil {
+		return nil, err
+	}
+	tarfile.Add("DEPS", depsContent)
+
 	for _, h := range hashes {
 		tarfile.AddAll(filepath.Join(home, ".dpm", "workspace", h), true)
 	}
@@ -194,6 +203,9 @@ func (p *Package) Deps() (DepGraph, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	graph[p.Sha256()] = graph["this"]
+	delete(graph, "this")
 
 	return graph, nil
 }

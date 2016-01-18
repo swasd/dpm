@@ -91,6 +91,22 @@ func TestSpecInfo(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestGetDeps(t *testing.T) {
+	p, err := BuildPackage("./_test")
+	assert.NoError(t, err)
+	err = p.SaveToFile("./_test/dir.dpm")
+	assert.NoError(t, err)
+	p2, err := LoadPackage("./_test/dir.dpm")
+	assert.NoError(t, err)
+	assert.Equal(t, len(p.content), len(p2.content))
+
+	deps, err := p2.Deps()
+	assert.Equal(t, len(deps), 1)
+
+	err = os.Remove("./_test/dir.dpm")
+	assert.NoError(t, err)
+}
+
 func TestParseAttributes(t *testing.T) {
 	m, err := parse("version=1.0.1 instances=1 x=\"x y\" ")
 	assert.NoError(t, err)
