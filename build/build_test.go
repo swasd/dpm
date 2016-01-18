@@ -8,35 +8,35 @@ import (
 )
 
 func TestBuild(t *testing.T) {
-	p, err := BuildPackage("./_test")
+	p, err := BuildPackage("./_base")
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
-	err = p.SaveToFile("./_test/dir.dpm")
+	err = p.SaveToFile("./_base/dir.dpm")
 	assert.NoError(t, err)
-	p2, err := LoadPackage("./_test/dir.dpm")
+	p2, err := LoadPackage("./_base/dir.dpm")
 	assert.NoError(t, err)
 	assert.Equal(t, len(p.content), len(p2.content))
-	err = os.Remove("./_test/dir.dpm")
+	err = os.Remove("./_base/dir.dpm")
 	assert.NoError(t, err)
 }
 
 func TestSave(t *testing.T) {
-	p, err := BuildPackage("./_test")
+	p, err := BuildPackage("./_base")
 	assert.NoError(t, err)
-	err = p.SaveToDir("./_test")
+	err = p.SaveToDir("./_base")
 	assert.NoError(t, err)
-	_, err = os.Stat("./_test/test_0.1.0.dev-do+none.dpm")
+	_, err = os.Stat("./_base/test_0.1.0.dev-do+none.dpm")
 	assert.NoError(t, err)
-	err = os.Remove("./_test/test_0.1.0.dev-do+none.dpm")
+	err = os.Remove("./_base/test_0.1.0.dev-do+none.dpm")
 	assert.NoError(t, err)
 }
 
 func TestExtract(t *testing.T) {
-	p, err := BuildPackage("./_test")
+	p, err := BuildPackage("./_base")
 	assert.NoError(t, err)
-	err = p.SaveToFile("./_test/dir.dpm")
+	err = p.SaveToFile("./_base/dir.dpm")
 	assert.NoError(t, err)
-	p2, err := LoadPackage("./_test/dir.dpm")
+	p2, err := LoadPackage("./_base/dir.dpm")
 	assert.NoError(t, err)
 	assert.Equal(t, len(p.content), len(p2.content))
 
@@ -58,7 +58,7 @@ func TestExtract(t *testing.T) {
 	_, err = os.Stat("./_extract/back/Dockerfile")
 	assert.NoError(t, err)
 
-	err = os.Remove("./_test/dir.dpm")
+	err = os.Remove("./_base/dir.dpm")
 	assert.NoError(t, err)
 
 	err = os.RemoveAll("./_extract")
@@ -66,11 +66,11 @@ func TestExtract(t *testing.T) {
 }
 
 func TestSpecInfo(t *testing.T) {
-	p, err := BuildPackage("./_test")
+	p, err := BuildPackage("./_base")
 	assert.NoError(t, err)
-	err = p.SaveToFile("./_test/dir.dpm")
+	err = p.SaveToFile("./_base/dir.dpm")
 	assert.NoError(t, err)
-	p2, err := LoadPackage("./_test/dir.dpm")
+	p2, err := LoadPackage("./_base/dir.dpm")
 	assert.NoError(t, err)
 	assert.Equal(t, len(p.content), len(p2.content))
 
@@ -87,23 +87,23 @@ func TestSpecInfo(t *testing.T) {
 	assert.Equal(t, spec.Dependencies["pack1"], "version=1.0")
 	assert.Equal(t, spec.Dependencies["pack2"], "version=2.0")
 
-	err = os.Remove("./_test/dir.dpm")
+	err = os.Remove("./_base/dir.dpm")
 	assert.NoError(t, err)
 }
 
 func TestGetDeps(t *testing.T) {
-	p, err := BuildPackage("./_test")
+	p, err := BuildPackage("./_base")
 	assert.NoError(t, err)
-	err = p.SaveToFile("./_test/dir.dpm")
+	err = p.SaveToFile("./_base/dir.dpm")
 	assert.NoError(t, err)
-	p2, err := LoadPackage("./_test/dir.dpm")
+	p2, err := LoadPackage("./_base/dir.dpm")
 	assert.NoError(t, err)
 	assert.Equal(t, len(p.content), len(p2.content))
 
 	deps, err := p2.Deps()
 	assert.Equal(t, len(deps), 3)
 
-	err = os.Remove("./_test/dir.dpm")
+	err = os.Remove("./_base/dir.dpm")
 	assert.NoError(t, err)
 }
 
