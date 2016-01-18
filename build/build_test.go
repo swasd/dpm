@@ -98,24 +98,13 @@ func TestParseAttributes(t *testing.T) {
 	assert.Equal(t, m["x"], "x y")
 }
 
-func TestResolveDependencies(t *testing.T) {
-	t.Skip()
-	p, err := BuildPackage("./_test")
-	assert.NoError(t, err)
-	err = p.SaveToFile("./_test/dir.dpm")
-	assert.NoError(t, err)
-	p2, err := LoadPackage("./_test/dir.dpm")
-	assert.NoError(t, err)
-	assert.Equal(t, len(p.content), len(p2.content))
+func TestMergeDepGraph(t *testing.T) {
+	g1 := make(DepGraph)
+	g1["a"] = []string{"b", "c"}
 
-	_, err = p2.Spec()
-	assert.NoError(t, err)
+	g2 := make(DepGraph)
+	g2["a"] = []string{"c", "d"}
 
-	// "build" and "build -a" (clear and resolve all dependencies again)
-	// for k, v := range spec.Dependencies {
-	//
-	// }
-
-	// d, err := p2.ResolveDependencies()
-
+	out := merge(g1, g2)
+	assert.Equal(t, g2["a"], []string{"b", "c", "d"})
 }

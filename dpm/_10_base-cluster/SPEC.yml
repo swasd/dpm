@@ -3,7 +3,7 @@ specVersion: 0.1.0
 spec:
   name: base-cluster
   # abstract package cannot start by itself, must be used by another package.
-  abstract: true
+  # abstract: true
   version: 0.1.0
   title: Base cluster package
   dependencies:

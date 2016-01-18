@@ -288,6 +288,29 @@ func (m *Machine) postProvision() []string {
 	return result
 }
 
+func (m *Machine) GetEnv() []string {
+	home := os.Getenv("HOME")
+	result := []string{}
+	cmd := exec.Command("docker-machine",
+		"-s", filepath.Join(home, ".dpm"), "env", "--shell", "sh", m.name)
+	out, err := cmd.Output()
+	if err != nil {
+		return []string{}
+	}
+
+	lines := strings.Split(string(out), "\n")
+	for _, line := range lines {
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) == 2 && parts[0] == "export" {
+			entry := strings.SplitN(parts[1], "=", 2)
+			entry[1] = strings.TrimLeft(strings.TrimRight(entry[1], `"`), `"`)
+			result = append(result, entry[0]+"="+entry[1])
+		}
+	}
+
+	return result
+}
+
 func (m *Machine) executePostProvision() ([]string, error) {
 	out := []string{}
 	for _, p := range m.postProvision() {
@@ -295,7 +318,13 @@ func (m *Machine) executePostProvision() ([]string, error) {
 		if err != nil {
 			return []string{}, err
 		}
+
 		cmd := exec.Command(args[0], args[1:]...)
+
+		if args[0] == "docker" {
+			cmd.Env = m.GetEnv()
+		}
+
 		o, err := cmd.CombinedOutput()
 		out = append(out, string(o))
 	}
