@@ -2,3 +2,8 @@ language: go
 go:
   - 1.5.3
 
+install: true
+
+script:
+  go install .
+
