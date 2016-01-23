@@ -143,9 +143,15 @@ func install(c *cli.Context) {
 			os.Exit(1)
 		}
 
+		times := 0
+	loop:
 		err = provSpec.Provision()
 		if err != nil {
 			fmt.Println(err)
+			times++
+			if times < 10 {
+				goto loop
+			}
 			os.Exit(1)
 		}
 
