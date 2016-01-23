@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/mattn/go-shellwords"
 
@@ -136,7 +137,21 @@ func (s *Spec) Provision() error {
 		}
 		err := m.create()
 		if err != nil {
-			return err
+			times := 0
+		loop:
+			time.Sleep(2 * time.Second)
+			err = m.reprovision()
+			if err != nil {
+				times++
+				if times < 3 {
+					goto loop
+				}
+
+				for m.doDelete() != nil {
+					time.Sleep(1 * time.Second)
+				}
+				return err
+			}
 		}
 
 		// TODO logging outputs
@@ -175,7 +190,7 @@ func (m *Machine) Driver() string {
 func (m *Machine) cmdLine() []string {
 	result := []string{"--driver", m.driver}
 	keys := []string{}
-	for k, _ := range m.options {
+	for k := range m.options {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -188,7 +203,7 @@ func (m *Machine) cmdLine() []string {
 			result = append(result, val)
 		case map[interface{}]interface{}:
 			keys := []string{}
-			for kk, _ := range val {
+			for kk := range val {
 				keys = append(keys, kk.(string))
 			}
 			sort.Strings(keys)
@@ -245,6 +260,15 @@ func (m *Machine) forceDelete() error {
 
 func (m *Machine) doDelete() error {
 	args := append([]string{"-s", dpmHome(), "rm", "-y"}, m.name)
+	cmd := exec.Command("docker-machine", args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func (m *Machine) reprovision() error {
+	args := append([]string{"-s", dpmHome(), "provision"}, m.name)
 	cmd := exec.Command("docker-machine", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
