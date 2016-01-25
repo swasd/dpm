@@ -155,6 +155,12 @@ func install(c *cli.Context) {
 			os.Exit(1)
 		}
 
+		err = provSpec.ExportEnvsToFile(filepath.Join(home, ".dpm", "workspace", hash, ".env"))
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
 		em = provSpec.ExportedMachine()
 
 		compose, err := composition.NewProject(em, hash, packageSpec)
@@ -178,6 +184,83 @@ func install(c *cli.Context) {
 	}
 	fmt.Printf("\nExported machine is %s.\n", em.Name)
 	fmt.Printf("Run \"docker-machine env %s%s\" to see how to connect to your Docker %s.\n", flag, em.Name, mode)
+
+}
+
+func doInit(c *cli.Context) {
+	force := c.Bool("force")
+	spec := `---
+specVersion: 0.1.0
+spec:
+  name: unnamed-cluster
+  version: 0.1.0
+  title: Unnamed cluster
+  provision: provision.yml
+  composition: composition.yml
+  dependencies:
+    package: version=1.0.0
+  description: >
+    This is the description.
+`
+	write := force
+	if write == false {
+		_, err := os.Stat("SPEC.yml")
+		if err != nil {
+			write = true
+		}
+	}
+
+	if write {
+		err := ioutil.WriteFile("SPEC.yml",
+			[]byte(spec),
+			0644)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
+
+	provision := `---
+machines:
+  node:
+    driver: none
+
+`
+	write = force
+	if write == false {
+		_, err := os.Stat("provision.yml")
+		if err != nil {
+			write = true
+		}
+	}
+
+	if write {
+		err := ioutil.WriteFile("provision.yml",
+			[]byte(provision),
+			0644)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
+
+	write = force
+	if write == false {
+		_, err := os.Stat("composition.yml")
+		if err != nil {
+			write = true
+		}
+	}
+
+	if write {
+		err := ioutil.WriteFile("composition.yml",
+			[]byte{},
+			0644)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
 
 }
 
@@ -399,6 +482,11 @@ func main() {
 			Name:   "info",
 			Usage:  "show info of the package",
 			Action: doInfo,
+		},
+		{
+			Name:   "init",
+			Usage:  "init the package files",
+			Action: doInit,
 		},
 	}
 

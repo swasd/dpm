@@ -17,6 +17,7 @@ import (
 
 type Spec struct {
 	MachineSpecs map[string]MachineSpec `yaml:"machines,omitempty"`
+	ExportedEnvs map[string]string      `yaml:"export-envs,omitempty"`
 }
 
 type MachineSpec struct {
@@ -163,6 +164,17 @@ func (s *Spec) Provision() error {
 	return nil
 }
 
+func (s *Spec) ExportEnvsToFile(filename string) error {
+	envs := []string{}
+	for k, v := range s.ExportedEnvs {
+		val := os.Expand(v, func(key string) string { return expand(key) })
+		envs = append(envs, k+"="+val)
+	}
+
+	content := strings.Join(envs, "\n")
+	return ioutil.WriteFile(filename, []byte(content), 0644)
+}
+
 func (s *Spec) RemoveMachines() error {
 	for _, m := range s.Machines() {
 		// TODO force delete and re-create
@@ -276,12 +288,7 @@ func (m *Machine) reprovision() error {
 	return cmd.Run()
 }
 
-func (m *Machine) expand(key string) string {
-
-	if key == "self" {
-		return m.name
-	}
-
+func expand(key string) string {
 	val := os.Getenv(key)
 	if val == "" {
 		parts := strings.SplitN(key, " ", 2)
@@ -306,6 +313,18 @@ func (m *Machine) expand(key string) string {
 		}
 	}
 	return val
+}
+
+func (m *Machine) expand(key string) string {
+
+	if key == "self" {
+		return m.name
+	}
+	if key == "this" {
+		return expand(m.name)
+	}
+
+	return expand(key)
 }
 
 func (m *Machine) postProvision() []string {
@@ -353,6 +372,15 @@ func (m *Machine) executePostProvision() ([]string, error) {
 		args, err := shellwords.Parse(p)
 		if err != nil {
 			return []string{}, err
+		}
+
+		if args[0] == "scp" {
+			// it's docker-machine sub-command
+			args = append([]string{"docker-machine", "-s", dpmHome()}, args...)
+		}
+
+		for i := range args {
+			args[i] = os.Expand(args[i], func(key string) string { return m.expand(key) })
 		}
 
 		cmd := exec.Command(args[0], args[1:]...)
