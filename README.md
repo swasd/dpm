@@ -6,7 +6,7 @@ Currently it focuses on supporting Docker and soon for `containerd` as well as K
 
 Started as a sub-project of `Swasd` (reads Swasdee - means Hello in the Thai language),
 `dpm` stands for "Dee Package Manager". *Dee* is a Thai word literally means good.
-Basically, we have a vision to have a good package manager for the clound native world.
+Basically, we have a vision to have a good package manager for the cloud native world.
 
 The technology behind `dpm` is historically from a toy project named `gattai`.
 
