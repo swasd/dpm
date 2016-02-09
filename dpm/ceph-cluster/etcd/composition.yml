@@ -1,0 +1,12 @@
+ceph-etcd:
+  image: "microbox/etcd"
+  container_name: "ceph-etcd"
+  hostname: "ceph-etcd"
+  net: "ceph"
+  volumes:
+    - "/var/etcd/:/data/"
+  ports:
+    - "4001:4001"
+    - "7001:7001"
+  command: "-name ceph-etcd"
+

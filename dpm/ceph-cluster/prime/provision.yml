@@ -1,0 +1,19 @@
+---
+machines:
+  ceph-mon-0:
+    driver: digitalocean
+    export: true
+    options:
+      digitalocean-image: debian-8-x64
+      digitalocean-region: sgp1
+      engine-opt:
+        cluster-store: consul://${consul}:8500
+        cluster-advertise: eth0:2376
+    post-provision:
+      - docker network create
+        --subnet 10.10.10.0/24
+        --driver overlay ceph
+
+# TODO
+# if there is a network created by the provision file
+# it will be an exported network

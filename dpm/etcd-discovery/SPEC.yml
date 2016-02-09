@@ -1,0 +1,13 @@
+---
+specVersion: 0.1.0
+spec:
+  name: etcd-discovery
+  version: 0.1.0
+  title: Etc Discovery
+  provision: provision.yml
+  composition: composition.yml
+  description: >
+    This is a discovery service based on Etcd.
+  provide: discovery
+  export:
+    discovery-url: etcd://${etcd}:4001

@@ -1,0 +1,6 @@
+---
+  - test:
+      when: docker ps --filter name=consul --format "{{.Names}}"
+      exit: 0
+      expect: consul
+

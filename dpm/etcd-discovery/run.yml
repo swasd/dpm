@@ -1,0 +1,11 @@
+---
+- docker run
+  --net ceph
+  --name ceph-etcd
+  --ip 10.0.0.2
+  -v /var/etcd/:/data/
+  -p 4001:4001
+  -p 7001:7001
+  -t microbox/etcd
+  -name ceph-etcd
+

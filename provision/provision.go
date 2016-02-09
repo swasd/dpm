@@ -288,31 +288,57 @@ func (m *Machine) reprovision() error {
 	return cmd.Run()
 }
 
+func dockerMachineIp(arg string) string {
+	out, err := exec.Command("docker-machine",
+		"-s", dpmHome(), "ip", arg).Output()
+	if err != nil {
+		return ""
+	}
+
+	val := strings.TrimSpace(string(out))
+	parts := strings.SplitN(val, ":", 2)
+	return parts[0]
+}
+
+func parseCmd(key string) (cmd string, arg string) {
+	parts := strings.SplitN(key, " ", 2)
+	if len(parts) == 1 {
+		cmd = "ip"
+		arg = parts[0]
+	} else if len(parts) == 2 {
+		cmd = parts[0]
+		arg = parts[1]
+	}
+	return
+}
+
+func luaEval(arg) string {
+	s := lua.NewState()
+	s.PushInteger(100)
+	s.SetGlobal("i")
+	if err := lua.DoString(s, "return "+arg); err != nil {
+		panic(err)
+	}
+	result := s.ToValue(s.Top())
+	return fmt.Sprintf("%v", result)
+}
+
 func expand(key string) string {
 	val := os.Getenv(key)
-	if val == "" {
-		parts := strings.SplitN(key, " ", 2)
-		cmd := ""
-		arg := ""
-		if len(parts) == 1 {
-			cmd = "ip"
-			arg = parts[0]
-		} else if len(parts) == 2 && parts[0] == "ip" {
-			cmd = "ip"
-			arg = parts[1]
-		}
-		out, err := exec.Command("docker-machine", "-s", dpmHome(), cmd, arg).Output()
-		if err != nil {
-			val = ""
-		}
-
-		val = strings.TrimSpace(string(out))
-		if cmd == "ip" {
-			parts := strings.SplitN(val, ":", 2)
-			val = parts[0]
-		}
+	if val != "" {
+		return val
 	}
+
+	cmd, arg := parseCmd(key)
+	switch cmd {
+	case "ip":
+		return dockerMachineIp(arg)
+	case "eval":
+		return luaEval(arg)
+	}
+
 	return val
+
 }
 
 func (m *Machine) expand(key string) string {

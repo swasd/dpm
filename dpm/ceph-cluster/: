@@ -1,0 +1,9 @@
+---
+machines:
+  ceph-mon:
+    driver: digitalocean
+    options:
+      digitalocean-image: debian-8-x64
+      digitalocean-region: sgp1
+
+

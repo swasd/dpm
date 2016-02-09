@@ -1,0 +1,13 @@
+---
+specVersion: 0.1.0
+spec:
+  name: ceph-mon
+  version: 0.1.0
+  title: Ceph Monitor Prime
+  provision: provision.yml
+  composition: composition.yml
+  dependencies:
+    consul-discovery: version=0.1.0
+  description: >
+    This is an experimental package
+    to provision a Ceph cluster.

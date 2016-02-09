@@ -18,6 +18,10 @@ type Spec struct {
 	compositionFile string
 }
 
+type RunFormat struct {
+	Run map[string][]string `yaml:"run"`
+}
+
 func NewProject(em provision.ExportedMachine, hash string, s *build.Spec) (*Spec, error) {
 	return &Spec{em.Name, em.Mode, hash, s.Name, s.Composition}, nil
 }
@@ -48,6 +52,27 @@ func dpmHome() string {
 	return filepath.Join(home, ".dpm")
 }
 
+func (s *Spec) isRunFormat() ([]string, bool) {
+	home := os.Getenv("HOME")
+	dir := filepath.Join(home, ".dpm", "workspace", s.hash)
+	filename := filepath.Join(dir, s.compositionFile)
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, false
+	}
+	runFormat := RunFormat{}
+	err = yaml.Unmarshal(data, &runFormat)
+	if err != nil {
+		return nil, false
+	}
+
+	return runFormat["run"], runFormat["run"] != nil
+}
+
+func (s *Spec) run() error {
+	return nil
+}
+
 func (s *Spec) Up() error {
 	home := os.Getenv("HOME")
 	dir := filepath.Join(home, ".dpm", "workspace", s.hash)
@@ -60,6 +85,10 @@ func (s *Spec) Up() error {
 	if info.Size() == int64(0) {
 		// peacefully skip
 		return nil
+	}
+
+	if s.isRunFormat() {
+		return s.run()
 	}
 
 	env, err := s.GetHostEnv()

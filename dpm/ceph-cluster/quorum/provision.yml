@@ -1,0 +1,26 @@
+---
+machines:
+  ceph-mon:
+    driver: digitalocean
+    instances: 2
+    options:
+      digitalocean-image: debian-8-x64
+      digitalocean-region: sgp1
+      engine-opt:
+        cluster-store: consul://${consul}:8500
+        cluster-advertise: eth0:2376
+    post-provision:
+      - docker run -d --net=ceph
+        --name ${self}
+        -v /etc/ceph:/etc/ceph
+        -v /var/lib/ceph/:/var/lib/ceph/
+        -e NETWORK_AUTO_DETECT=1
+        -e CLUSTER=ceph-cluster
+        -e KV_TYPE=etcd
+        -e KV_IP=ceph-etcd
+        -e KV_PORT=4001
+        -p 6789:6789
+        -p 6800-6805:6800-6805
+        -p 80:80
+        -p 5000:5000
+        chanwit/ceph-daemon mon

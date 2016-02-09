@@ -1,0 +1,14 @@
+---
+specVersion: 0.1.0
+spec:
+  name: ceph-mon-quorum
+  version: 0.1.0
+  title: Ceph monitor quorum
+  provision: provision.yml
+  composition: composition.yml
+  dependencies:
+    ceph-mon-prime: version=0.1.0
+  description: >
+    This package is other instances to form
+    quorum for a Ceph monitor cluster.
+

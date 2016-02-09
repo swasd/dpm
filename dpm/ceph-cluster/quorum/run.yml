@@ -1,0 +1,11 @@
+---
+run:
+  - docker run --net=${network}
+    --name ceph-mon-${index}
+    --ip 10.10.10.${eval index+2}
+    -e MON_IP=10.10.10.${eval index+2}
+    -e CEPH_PUBLIC_NETWORK=10.10.10.0/24
+    -v /etc/ceph:/etc/ceph
+    -v /var/lib/ceph:/var/lib/ceph
+    -t ceph/daemon
+    mon

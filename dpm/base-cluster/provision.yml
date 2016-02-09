@@ -6,12 +6,11 @@ machines:
     options:
       digitalocean-image: debian-8-x64
       engine-opt:
-        cluster-store: consul://${consul}:8500
+        cluster-store: ${discovery-url}
         cluster-advertise: eth0:2376
-        cluster-opt: discovery.heartbeat=40
       swarm: true
       swarm-master: true
-      swarm-discovery: consul://${consul}:8500/discovery
+      swarm-discovery: ${discovery-url}/discovery
     post-provision:
       - docker network create --driver overlay multihost
 
@@ -21,9 +20,8 @@ machines:
     options:
       digitalocean-image: debian-8-x64
       engine-opt:
-        cluster-store: consul://${consul}:8500
+        cluster-store: ${discovery-url}
         cluster-advertise: eth0:2376
-        cluster-opt: discovery.heartbeat=40
       swarm: true
-      swarm-discovery: consul://${consul}:8500/discovery
+      swarm-discovery: ${discovery-url}/discovery
 

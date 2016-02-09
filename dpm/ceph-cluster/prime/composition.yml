@@ -1,0 +1,14 @@
+ceph-mon:
+  image: "chanwit/ceph-daemon"
+  container_name: ceph-mon
+  net: ceph
+  volumes:
+    - /etc/ceph:/etc/ceph
+    - /var/lib/ceph:/var/lib/ceph
+  ports:
+    - "6789:6789"
+    - "6800-6805:6800-6805"
+    - "80:80"
+    - "5000:5000"
+  env_file: .env
+  command: mon

@@ -1,0 +1,10 @@
+ceph-consul:
+  image: "progrium/consul:latest"
+  container_name: "ceph-consul"
+  hostname: "ceph-consul"
+  net: "ceph"
+  ports:
+    - "8400:8400"
+    - "8500:8500"
+    - "53:53"
+  command: "-server -bootstrap-expect 1 -ui-dir /ui"

@@ -1,0 +1,8 @@
+---
+machines:
+  etcd:
+    driver: digitalocean
+    export: true
+    options:
+      digitalocean-image: debian-8-x64
+
