@@ -34,6 +34,7 @@ type Spec struct {
 	Description  string
 	Dirs         []string
 	Dependencies map[string]string // in `"package": version=number` format
+	Provide      string // abstract name, like alias
 }
 
 type Root struct {

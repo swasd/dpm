@@ -1,6 +1,7 @@
 package composition
 
 import (
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,7 +35,6 @@ func (s *Spec) GetHostEnv() ([]string, error) {
 	if err != nil {
 		return []string{}, nil
 	}
-
 	lines := strings.Split(string(out), "\n")
 	for _, line := range lines {
 		parts := strings.SplitN(line, " ", 2)

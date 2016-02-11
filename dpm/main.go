@@ -438,7 +438,7 @@ func doInfo(c *cli.Context) {
 func main() {
 	app := cli.NewApp()
 	app.Name = "dpm"
-	app.Usage = "A package manager for Docker"
+	app.Usage = "Dee Package Manager for Container Engines"
 	app.Version = "0.1-dev"
 
 	app.Commands = []cli.Command{

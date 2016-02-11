@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Shopify/go-lua"
 	"github.com/mattn/go-shellwords"
 
 	"gopkg.in/yaml.v2"
@@ -312,7 +313,7 @@ func parseCmd(key string) (cmd string, arg string) {
 	return
 }
 
-func luaEval(arg) string {
+func luaEval(arg string) string {
 	s := lua.NewState()
 	s.PushInteger(100)
 	s.SetGlobal("i")

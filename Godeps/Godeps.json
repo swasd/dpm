@@ -94,6 +94,10 @@
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
 			"Rev": "f7716cbe52baa25d2e9b0d0da546fcf909fc16b4"
+		},
+		{
+			"ImportPath": "github.com/Shopify/go-lua",
+			"Rev": "ab742d31e91ecc75039255ff143c89f5ef5c843f"
 		}
 	]
 }
